@@ -12,6 +12,7 @@ import {
   Plus,
   Minus,
   ChevronDown,
+  Settings2,
 } from "lucide-react";
 import { createGardenScene } from "./gardenScene.js";
 import { read } from "./data.js";
@@ -20,14 +21,24 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     markers = useRef([]),
     scene = useRef(null);
   const [error, setError] = useState(false);
+  const [view, setView] = useState("3d");
+  const [revolving, setRevolving] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
   useEffect(() => {
     try {
-      scene.current = createGardenScene(host.current, dark, markers.current);
+      setError(false);
+      scene.current = createGardenScene(host.current, dark, markers.current, {
+        view,
+      });
     } catch {
       setError(true);
     }
     return () => scene.current?.dispose();
-  }, [dark]);
+  }, [dark, view]);
+  useEffect(() => {
+    scene.current?.setRevolving(revolving);
+    scene.current?.setLabelsVisible(showLabels);
+  }, [revolving, showLabels, dark, view]);
   const labels = [
     ["Weather station", "Outdoor sensors", () => onHistory("temperature")],
     ["Humidity extractors", "Two units", () => onHistory("humidity")],
@@ -40,13 +51,53 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     <section className="twin-page">
       <div className="twin-stage">
         <div ref={host} className="twin-canvas" />
+        <details className="scene-settings">
+          <summary aria-label="Garden view settings" title="View settings">
+            <Settings2 size={18} />
+          </summary>
+          <div className="scene-settings-panel">
+            <div className="view-switch" role="group" aria-label="Garden view">
+              <button
+                aria-pressed={view === "3d"}
+                onClick={() => setView("3d")}
+              >
+                3D
+              </button>
+              <button
+                aria-pressed={view === "2d"}
+                onClick={() => setView("2d")}
+              >
+                2D
+              </button>
+            </div>
+            <label>
+              <span>Revolve</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={revolving}
+                disabled={view === "2d"}
+                onChange={(event) => setRevolving(event.target.checked)}
+              />
+            </label>
+            <label>
+              <span>Labels</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={showLabels}
+                onChange={(event) => setShowLabels(event.target.checked)}
+              />
+            </label>
+          </div>
+        </details>
         {error && (
           <div className="scene-fallback">
             This browser could not open the 3D view. Use Overview for sensor
             readings and Cameras for the live feeds.
           </div>
         )}
-        <div className="scene-labels">
+        <div className="scene-labels" hidden={!showLabels}>
           {labels.map(([title, value, action], index) => (
             <button
               key={title}
@@ -117,11 +168,14 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
         <div className="scene-controls">
           <span>
             <Move3D size={15} />
-            Drag to orbit · scroll to zoom
+            {view === "2d"
+              ? "Drag to pan · scroll to zoom"
+              : "Drag to orbit · scroll to zoom"}
           </span>
           <button
             className="icon-button"
             aria-label="Rotate garden left"
+            disabled={view === "2d"}
             onClick={() => scene.current?.orbit(-0.25)}
           >
             <ChevronLeft size={17} />
@@ -129,6 +183,7 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
           <button
             className="icon-button"
             aria-label="Rotate garden right"
+            disabled={view === "2d"}
             onClick={() => scene.current?.orbit(0.25)}
           >
             <ChevronRight size={17} />
@@ -149,7 +204,7 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
           </button>
           <button
             className="icon-button"
-            aria-label="Reset 3D view"
+            aria-label="Reset garden view"
             onClick={() => scene.current?.reset()}
           >
             <RotateCcw size={17} />
@@ -157,10 +212,7 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
         </div>
       </div>
       <p className="reconstruction-note">
-        Camera-informed 3D reconstruction. Plant shapes and positions are
-        approximate; additional photographs and dimensions will improve the
-        match. Flow animation illustrates the tubing route; it is not a measured
-        flow rate.
+        Approximate site model · Tubing animation is illustrative.
       </p>
     </section>
   );

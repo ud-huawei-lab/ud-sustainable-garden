@@ -2,11 +2,18 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 // Camera-informed composition, intentionally approximate rather than survey geometry.
-export function createGardenScene(host, dark, markerElements) {
+export function createGardenScene(
+  host,
+  dark,
+  markerElements,
+  { view = "3d" } = {},
+) {
+  const plan = view === "2d";
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(dark ? "#000000" : "#ffffff");
-  scene.fog = new THREE.Fog(scene.background, 36, 72);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  // Let the page's green glow continue behind the model without a rectangular canvas background.
+  scene.fog = new THREE.Fog(dark ? "#000000" : "#ffffff", 36, 72);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -16,13 +23,21 @@ export function createGardenScene(host, dark, markerElements) {
   host.appendChild(renderer.domElement);
   renderer.domElement.setAttribute(
     "aria-label",
-    "Interactive 3D reconstruction of the sustainable garden",
+    plan
+      ? "Interactive 2D plan of the sustainable garden"
+      : "Interactive 3D reconstruction of the sustainable garden",
   );
   renderer.domElement.setAttribute("role", "img");
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 120);
-  camera.position.set(15, 23, 26);
+  const camera = plan
+    ? new THREE.OrthographicCamera(-14, 14, 12, -12, 0.1, 120)
+    : new THREE.PerspectiveCamera(38, 1, 0.1, 120);
+  camera.position.set(...(plan ? [0, 32, 0.01] : [15, 23, 26]));
+  if (plan) camera.up.set(0, 0, -1);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.8, 1);
+  controls.target.set(0, plan ? 0 : 0.8, plan ? 0 : 1);
+  controls.enableRotate = !plan;
+  controls.minZoom = 0.5;
+  controls.maxZoom = 3;
   controls.enableDamping = true;
   controls.minDistance = 10;
   controls.maxDistance = 40;
@@ -340,13 +355,27 @@ export function createGardenScene(host, dark, markerElements) {
     [-2, 3.5, 0.65],
   ];
   const vector = new THREE.Vector3();
+  let labelsVisible = false;
+  let labelSizes = markerElements.map((element) => ({
+    width: element?.offsetWidth || 120,
+    height: element?.offsetHeight || 42,
+  }));
   let frame;
   let disposed = false;
   const resize = () => {
     const { width, height } = host.getBoundingClientRect();
     renderer.setSize(width, height, false);
-    camera.aspect = width / height;
-    camera.zoom = Math.min(1, camera.aspect * 1.15);
+    const aspect = width / Math.max(1, height);
+    if (plan) {
+      const halfHeight = Math.max(11, 13 / aspect);
+      camera.left = -halfHeight * aspect;
+      camera.right = halfHeight * aspect;
+      camera.top = halfHeight;
+      camera.bottom = -halfHeight;
+    } else {
+      camera.aspect = aspect;
+      camera.zoom = Math.min(1, aspect * 1.15);
+    }
     camera.updateProjectionMatrix();
   };
   const observer = new ResizeObserver(resize);
@@ -373,10 +402,39 @@ export function createGardenScene(host, dark, markerElements) {
       height = host.clientHeight;
     markerPositions.forEach((position, index) => {
       const element = markerElements[index];
-      if (!element) return;
+      if (!element || !labelsVisible) return;
       vector.set(...position).project(camera);
-      const labelOffset = index === 4 ? -65 : index === 5 ? 55 : 0;
-      element.style.transform = `translate(-50%,-100%) translate(${(vector.x * 0.5 + 0.5) * width + labelOffset}px,${(-vector.y * 0.5 + 0.5) * height}px)`;
+      const offsets = plan
+        ? [
+            [-100, -20],
+            [-30, 40],
+            [90, 20],
+            [90, -10],
+            [-100, -10],
+            [0, 50],
+          ]
+        : [
+            [-150, -50],
+            [0, -90],
+            [160, 10],
+            [160, -20],
+            [-150, 0],
+            [0, 80],
+          ];
+      const scale = Math.min(1, width / 900);
+      const [offsetX, offsetY] = offsets[index];
+      const size = labelSizes[index];
+      const left = THREE.MathUtils.clamp(
+        (vector.x * 0.5 + 0.5) * width + offsetX * scale - size.width / 2,
+        8,
+        Math.max(8, width - size.width - 8),
+      );
+      const top = THREE.MathUtils.clamp(
+        (-vector.y * 0.5 + 0.5) * height - size.height + offsetY * scale,
+        8,
+        Math.max(8, height - size.height - 8),
+      );
+      element.style.transform = `translate(${left}px,${top}px)`;
       element.style.visibility =
         vector.z < 1 && Math.abs(vector.x) < 1.15 && Math.abs(vector.y) < 1.15
           ? "visible"
@@ -386,7 +444,20 @@ export function createGardenScene(host, dark, markerElements) {
   }
   render();
   return {
+    setRevolving(enabled) {
+      controls.autoRotate = enabled && !plan;
+      controls.autoRotateSpeed = 0.55;
+    },
+    setLabelsVisible(visible) {
+      labelsVisible = visible;
+      if (visible)
+        labelSizes = markerElements.map((element) => ({
+          width: element?.offsetWidth || 120,
+          height: element?.offsetHeight || 42,
+        }));
+    },
     orbit(delta) {
+      if (plan) return;
       camera.position
         .sub(controls.target)
         .applyAxisAngle(new THREE.Vector3(0, 1, 0), delta)
@@ -394,14 +465,23 @@ export function createGardenScene(host, dark, markerElements) {
       controls.update();
     },
     zoom(factor) {
+      if (plan) {
+        camera.zoom = THREE.MathUtils.clamp(camera.zoom / factor, 0.5, 3);
+        camera.updateProjectionMatrix();
+        return;
+      }
       const offset = camera.position.clone().sub(controls.target);
       offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, 10, 40));
       camera.position.copy(controls.target).add(offset);
       controls.update();
     },
     reset() {
-      camera.position.set(15, 23, 26);
-      controls.target.set(0, 0.8, 1);
+      camera.position.set(...(plan ? [0, 32, 0.01] : [15, 23, 26]));
+      controls.target.set(0, plan ? 0 : 0.8, plan ? 0 : 1);
+      if (plan) {
+        camera.zoom = 1;
+        camera.updateProjectionMatrix();
+      }
       controls.update();
     },
     dispose() {

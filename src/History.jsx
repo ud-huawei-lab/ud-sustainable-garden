@@ -3,6 +3,7 @@ import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 import { metrics } from "../shared/catalog.js";
 import { format, time } from "./data.js";
 import { Panel } from "./Weather.jsx";
+import Skeleton from "./Skeleton.jsx";
 
 const colors = ["var(--chart-primary)", "var(--chart-secondary)"];
 const localInput = (value) =>
@@ -435,7 +436,7 @@ export default function History({ metricKey, setMetricKey, grafanaUrl }) {
         </div>
       </div>
       {loading ? (
-        <div className="chart-empty">Loading recorded readings…</div>
+        <Skeleton kind="chart" label="Loading recorded readings" />
       ) : error ? (
         <div className="chart-empty">
           <p>{error}</p>

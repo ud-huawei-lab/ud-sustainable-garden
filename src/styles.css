@@ -2770,3 +2770,394 @@ input {
     padding: 28px 24px;
   }
 }
+
+/* Quiet loading surfaces keep their layout while data arrives. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.skeleton-block {
+  display: block;
+  background: var(--line);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.6s ease-in-out infinite alternate;
+}
+@keyframes skeleton-pulse {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+.skeleton-readings,
+.skeleton-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.skeleton-tile {
+  min-height: 230px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+.skeleton-label {
+  width: 42%;
+  height: 12px;
+}
+.skeleton-value {
+  width: 65%;
+  height: 48px;
+}
+.skeleton-fill {
+  width: 100%;
+  height: 100%;
+}
+.skeleton-chart {
+  height: 340px;
+  padding: 24px 0;
+}
+.skeleton-scene {
+  height: calc(100dvh - 222px);
+  min-height: 450px;
+}
+.skeleton-session {
+  width: min(420px, 80vw);
+  height: 200px;
+}
+.clean-camera-grid {
+  gap: 16px;
+  margin-top: 10px;
+}
+.camera-feed {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #090909;
+  color: #f5f5f5;
+  isolation: isolate;
+}
+.camera-feed video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.camera-feed .skeleton-camera {
+  position: absolute;
+  inset: 0;
+  background: #090909;
+}
+.skeleton-camera .skeleton-block {
+  background: #222;
+  border-radius: 0;
+}
+.feed-caption {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 30px 16px 12px;
+  background: linear-gradient(transparent, #000b);
+  font-size: 12px;
+  pointer-events: none;
+}
+.feed-caption > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.feed-caption time {
+  font-variant-numeric: tabular-nums;
+  color: #ddd;
+  font-size: 11px;
+}
+.feed-caption button {
+  pointer-events: auto;
+  color: white;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+.feed-caption button:hover {
+  background: #ffffff24;
+}
+.feed-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  background: #090909;
+  font-size: 14px;
+}
+.feed-error > svg {
+  color: #888;
+}
+.feed-retry {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: inherit;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+.feed-retry:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.feed-buffering {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+}
+.feed-buffering .skeleton-block {
+  height: 100%;
+  background: #bbb;
+}
+.feed-notice {
+  position: absolute;
+  bottom: 65px;
+  left: 16px;
+  font-size: 12px;
+}
+.camera-feed:fullscreen {
+  border-radius: 0;
+  border: 0;
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 850px) {
+  .skeleton-readings,
+  .skeleton-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .skeleton-readings,
+  .skeleton-overview {
+    grid-template-columns: 1fr;
+  }
+  .clean-camera-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}
+
+/* Experimental sustainability tint belongs to the page, not its cards. */
+:root {
+  --page-background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      rgba(80, 145, 97, 0.15),
+      transparent 55%
+    ),
+    #fff;
+  background: var(--page-background);
+  background-attachment: fixed;
+}
+:root body {
+  background: var(--page-background);
+  background-attachment: fixed;
+  min-height: 100svh;
+}
+:root[data-theme="dark"] {
+  --page-background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      rgba(55, 117, 73, 0.28),
+      transparent 55%
+    ),
+    #000;
+  background: var(--page-background);
+}
+:root[data-theme="dark"] body {
+  background: var(--page-background);
+  background-attachment: fixed;
+}
+.topbar {
+  background: var(--page-background);
+  background-attachment: fixed;
+}
+.twin-stage {
+  background: transparent;
+}
+.view-switch {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--base);
+}
+.view-switch button {
+  min-width: 38px;
+  min-height: 32px;
+  border-radius: 5px;
+  color: var(--muted);
+}
+.view-switch button[aria-pressed="true"] {
+  background: var(--line);
+  color: var(--text);
+}
+@media (max-width: 700px) {
+  .scene-controls {
+    gap: 2px;
+  }
+  .scene-label {
+    padding: 7px 8px;
+  }
+  .scene-label span {
+    display: none;
+  }
+}
+
+.feed-controls {
+  position: absolute;
+  bottom: 56px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: #0009;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.camera-feed:hover .feed-controls,
+.camera-feed:focus-within .feed-controls {
+  opacity: 1;
+}
+.feed-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  min-height: 36px;
+  color: inherit;
+  border-radius: 5px;
+}
+.feed-controls button:hover {
+  background: #ffffff20;
+}
+.feed-controls input {
+  width: 68px;
+  accent-color: #ddd;
+  cursor: pointer;
+}
+.feed-controls .feed-live {
+  padding: 0 9px;
+  font-size: 11px;
+}
+@media (hover: none), (pointer: coarse) {
+  .feed-controls {
+    opacity: 1;
+  }
+  .feed-controls button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-controls {
+    transition: none;
+  }
+}
+.scene-settings {
+  position: absolute;
+  top: 20px;
+  right: 18px;
+  z-index: 3;
+}
+.scene-settings > summary {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 8px;
+  background: var(--base);
+  border: 1px solid var(--line);
+}
+.scene-settings > summary::-webkit-details-marker {
+  display: none;
+}
+.scene-settings[open] > summary {
+  color: var(--text);
+}
+.scene-settings-panel {
+  position: absolute;
+  right: 0;
+  top: 46px;
+  width: 190px;
+  padding: 12px;
+  background: var(--base);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 12px;
+}
+.scene-settings-panel .view-switch {
+  justify-content: stretch;
+  margin-bottom: 8px;
+}
+.scene-settings-panel .view-switch button {
+  flex: 1;
+}
+.scene-settings-panel label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  gap: 16px;
+  cursor: pointer;
+}
+.scene-settings-panel input {
+  accent-color: var(--text);
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.scene-settings-panel label:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+.scene-settings summary:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+.scene-labels[hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .scene-settings {
+    top: 20px;
+    right: 12px;
+  }
+}

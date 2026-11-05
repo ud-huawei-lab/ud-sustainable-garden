@@ -153,10 +153,6 @@ function SensorTile({ sensor, entities, onSelect, featured }) {
       {scale && (
         <MeasurementScale type={scale} value={raw} compact={!featured} />
       )}
-      <span className="sensor-history-link">
-        View history
-        <ArrowUpRight size={11} />
-      </span>
     </button>
   );
 }
@@ -193,18 +189,8 @@ export default function ReadingPage({ entities, onSelect }) {
   return (
     <section
       className="reading-page reading-columnar"
-      aria-labelledby="reading-heading"
+      aria-label="Sensor readings"
     >
-      <div className="reading-intro">
-        <div>
-          <h2 id="reading-heading">The garden, in detail.</h2>
-          <p>
-            Current measurements and their recorded history. Select any reading
-            to explore.
-          </p>
-        </div>
-        <span>23 sensors · 7 categories</span>
-      </div>
       <div className="reading-mosaic">
         {[
           ["temperature", "solar"],
