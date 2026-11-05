@@ -3,7 +3,6 @@ import {
   Sun,
   Moon,
   LayoutGrid,
-  ChartNoAxesCombined,
   Cctv,
   Box,
   SlidersHorizontal,
@@ -16,19 +15,19 @@ import { useReadings } from "./data.js";
 import { Headline, Solar, WindPanel, RainPanel, AirPanel } from "./Weather.jsx";
 import History from "./History.jsx";
 import Cameras from "./Cameras.jsx";
-import HistoryPage, { SensorTiles } from "./Sensors.jsx";
+import ReadingPage from "./Sensors.jsx";
 const Home = lazy(() => import("./Home.jsx"));
 const pages = {
   home: "Digital garden",
   overview: "Current readings",
-  readings: "All station readings",
-  history: "Sensor history",
+  readings: "Reading & history",
   cameras: "Garden CCTV",
 };
-const currentPage = () =>
-  Object.hasOwn(pages, location.hash.replace("#/", ""))
-    ? location.hash.replace("#/", "")
-    : "home";
+const currentPage = () => {
+  const route = location.hash.replace("#/", "");
+  if (route === "history" || route === "reading") return "readings";
+  return Object.hasOwn(pages, route) ? route : "home";
+};
 
 export default function App() {
   const data = useReadings();
@@ -89,8 +88,7 @@ export default function App() {
           {[
             ["home", "Home", Box],
             ["overview", "Overview", LayoutGrid],
-            ["readings", "Readings", Gauge],
-            ["history", "History", ChartNoAxesCombined],
+            ["readings", "Reading", Gauge],
             ["cameras", "CCTV", Cctv],
           ].map(([id, label, Icon]) => (
             <a
@@ -157,16 +155,7 @@ export default function App() {
           </>
         )}
         {page === "readings" && (
-          <section className="sensor-directory">
-            <div className="directory-heading">
-              <h2>All station readings</h2>
-              <p>Select a sensor to explore its history.</p>
-            </div>
-            <SensorTiles entities={data.entities} onSelect={showHistory} />
-          </section>
-        )}
-        {page === "history" && (
-          <HistoryPage entities={data.entities} onSelect={showHistory} />
+          <ReadingPage entities={data.entities} onSelect={showHistory} />
         )}
         {page === "cameras" && <Cameras />}
         <footer className="page-footer">

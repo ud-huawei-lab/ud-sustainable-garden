@@ -18,8 +18,7 @@ Open http://127.0.0.1:5173. For development with hot reload, use `npm run dev` i
 
 - **Home:** Three.js reconstruction with orbit, zoom, keyboard-operable view controls, equipment labels, and real station readings. Two humidity extractors and two pots to their right. Layout and foliage are approximate, not a photogrammetry scan.
 - **Overview:** the weather reference layout with current conditions and bright UV, irradiance, and AQI scales. The full sensor directory is separate.
-- **Readings:** all 23 mapped readings grouped under Temperature, Humidity, Wind, Pressure, Solar & UV, Rainfall, and Air Quality. Cards are monochrome; color is reserved for measurement scales.
-- **History:** sensor tiles open a centered dialog with 24-hour, 7-day, 30-day, or custom history; numeric graphs, text change tables, Dubai timestamps, and CSV export of displayed samples.
+- **Reading:** a single page combines all 23 live readings with their history. An asymmetric layout gives temperature and wind larger feature tiles, pairs humidity, uses a wide solar section, and compacts rainfall and air quality. Select any sensor for a centered history dialog with 24-hour, 7-day, 30-day, or custom ranges, Dubai timestamps, and CSV export. The old `#/history` link opens this same page. Cards remain monochrome; color is reserved for measurement scales.
 - **CCTV:** both camera feeds start automatically using HLS.js. Streams are muted by default; fullscreen/expanded views are available. If the upstream camera cannot stream, a snapshot fallback is shown.
 
 AI is a disabled visual preview. There are no agent calls or connection-status badges. Green/yellow/red are used only within measurement scales. Page backgrounds are pure white or black. Home has a collapsible Environment panel and no outer frame.
