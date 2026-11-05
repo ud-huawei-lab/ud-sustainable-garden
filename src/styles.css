@@ -2972,7 +2972,7 @@ input {
   --page-background:
     radial-gradient(
       ellipse at 85% 0%,
-      rgba(80, 145, 97, 0.09),
+      rgba(80, 145, 97, 0.15),
       transparent 55%
     ),
     #fff;
@@ -2988,7 +2988,7 @@ input {
   --page-background:
     radial-gradient(
       ellipse at 85% 0%,
-      rgba(55, 117, 73, 0.17),
+      rgba(55, 117, 73, 0.28),
       transparent 55%
     ),
     #000;
@@ -3004,15 +3004,6 @@ input {
 }
 .twin-stage {
   background: transparent;
-}
-.scene-view-options {
-  position: absolute;
-  top: 20px;
-  right: 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 11px;
 }
 .view-switch {
   display: flex;
@@ -3031,27 +3022,7 @@ input {
   background: var(--line);
   color: var(--text);
 }
-.wireframe-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  min-height: 38px;
-  padding: 0 8px;
-  border-radius: 6px;
-  background: var(--base);
-  border: 1px solid var(--line);
-}
-.wireframe-toggle[aria-pressed="true"] {
-  color: var(--text);
-  background: var(--subtle);
-}
 @media (max-width: 700px) {
-  .scene-view-options {
-    top: 76px;
-    right: 12px;
-    gap: 6px;
-  }
   .scene-controls {
     gap: 2px;
   }
@@ -3115,5 +3086,78 @@ input {
 @media (prefers-reduced-motion: reduce) {
   .feed-controls {
     transition: none;
+  }
+}
+.scene-settings {
+  position: absolute;
+  top: 20px;
+  right: 18px;
+  z-index: 3;
+}
+.scene-settings > summary {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 8px;
+  background: var(--base);
+  border: 1px solid var(--line);
+}
+.scene-settings > summary::-webkit-details-marker {
+  display: none;
+}
+.scene-settings[open] > summary {
+  color: var(--text);
+}
+.scene-settings-panel {
+  position: absolute;
+  right: 0;
+  top: 46px;
+  width: 190px;
+  padding: 12px;
+  background: var(--base);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 12px;
+}
+.scene-settings-panel .view-switch {
+  justify-content: stretch;
+  margin-bottom: 8px;
+}
+.scene-settings-panel .view-switch button {
+  flex: 1;
+}
+.scene-settings-panel label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  gap: 16px;
+  cursor: pointer;
+}
+.scene-settings-panel input {
+  accent-color: var(--text);
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.scene-settings-panel label:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+.scene-settings summary:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+.scene-labels[hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .scene-settings {
+    top: 20px;
+    right: 12px;
   }
 }

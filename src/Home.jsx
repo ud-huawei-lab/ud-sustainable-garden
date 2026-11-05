@@ -12,7 +12,7 @@ import {
   Plus,
   Minus,
   ChevronDown,
-  Boxes,
+  Settings2,
 } from "lucide-react";
 import { createGardenScene } from "./gardenScene.js";
 import { read } from "./data.js";
@@ -22,7 +22,8 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     scene = useRef(null);
   const [error, setError] = useState(false);
   const [view, setView] = useState("3d");
-  const [wireframe, setWireframe] = useState(false);
+  const [revolving, setRevolving] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
   useEffect(() => {
     try {
       setError(false);
@@ -35,8 +36,9 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     return () => scene.current?.dispose();
   }, [dark, view]);
   useEffect(() => {
-    scene.current?.setWireframe(wireframe);
-  }, [wireframe, dark, view]);
+    scene.current?.setRevolving(revolving);
+    scene.current?.setLabelsVisible(showLabels);
+  }, [revolving, showLabels, dark, view]);
   const labels = [
     ["Weather station", "Outdoor sensors", () => onHistory("temperature")],
     ["Humidity extractors", "Two units", () => onHistory("humidity")],
@@ -49,31 +51,53 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     <section className="twin-page">
       <div className="twin-stage">
         <div ref={host} className="twin-canvas" />
-        <div className="scene-view-options" aria-label="Garden display options">
-          <div className="view-switch" role="group" aria-label="Garden view">
-            <button aria-pressed={view === "3d"} onClick={() => setView("3d")}>
-              3D
-            </button>
-            <button aria-pressed={view === "2d"} onClick={() => setView("2d")}>
-              2D
-            </button>
+        <details className="scene-settings">
+          <summary aria-label="Garden view settings" title="View settings">
+            <Settings2 size={18} />
+          </summary>
+          <div className="scene-settings-panel">
+            <div className="view-switch" role="group" aria-label="Garden view">
+              <button
+                aria-pressed={view === "3d"}
+                onClick={() => setView("3d")}
+              >
+                3D
+              </button>
+              <button
+                aria-pressed={view === "2d"}
+                onClick={() => setView("2d")}
+              >
+                2D
+              </button>
+            </div>
+            <label>
+              <span>Revolve</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={revolving}
+                disabled={view === "2d"}
+                onChange={(event) => setRevolving(event.target.checked)}
+              />
+            </label>
+            <label>
+              <span>Labels</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={showLabels}
+                onChange={(event) => setShowLabels(event.target.checked)}
+              />
+            </label>
           </div>
-          <button
-            className="wireframe-toggle"
-            aria-pressed={wireframe}
-            onClick={() => setWireframe((value) => !value)}
-          >
-            <Boxes size={14} />
-            Wireframe
-          </button>
-        </div>
+        </details>
         {error && (
           <div className="scene-fallback">
             This browser could not open the 3D view. Use Overview for sensor
             readings and Cameras for the live feeds.
           </div>
         )}
-        <div className="scene-labels">
+        <div className="scene-labels" hidden={!showLabels}>
           {labels.map(([title, value, action], index) => (
             <button
               key={title}

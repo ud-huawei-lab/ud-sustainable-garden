@@ -103,8 +103,8 @@ export function createGardenScene(
     );
   const ground = box(21, 0.3, 17, "#d2c1a0", 0, -0.22, 0);
   ground.receiveShadow = true;
-  const foundation = box(21.2, 0.13, 17.2, "#b7a78c", 0, -0.43, 0);
-  const equipmentPad = box(12.8, 0.16, 7.7, "#b9b7ac", -2.5, 0.02, -3.6);
+  box(21.2, 0.13, 17.2, "#b7a78c", 0, -0.43, 0);
+  box(12.8, 0.16, 7.7, "#b9b7ac", -2.5, 0.02, -3.6);
   const dummy = new THREE.Object3D();
   let seed = 45;
   const random = () => {
@@ -355,13 +355,8 @@ export function createGardenScene(
     [-2, 3.5, 0.65],
   ];
   const vector = new THREE.Vector3();
-  const solidSurfaces = new Set([
-    ground.material,
-    foundation.material,
-    equipmentPad.material,
-    parking.material,
-  ]);
-  const labelSizes = markerElements.map((element) => ({
+  let labelsVisible = false;
+  let labelSizes = markerElements.map((element) => ({
     width: element?.offsetWidth || 120,
     height: element?.offsetHeight || 42,
   }));
@@ -405,38 +400,41 @@ export function createGardenScene(
     renderer.render(scene, camera);
     const width = host.clientWidth,
       height = host.clientHeight;
-    const placedLabels = [];
     markerPositions.forEach((position, index) => {
       const element = markerElements[index];
-      if (!element) return;
+      if (!element || !labelsVisible) return;
       vector.set(...position).project(camera);
-      const labelOffset = index === 4 ? -65 : index === 5 ? 55 : 0;
+      const offsets = plan
+        ? [
+            [-100, -20],
+            [-30, 40],
+            [90, 20],
+            [90, -10],
+            [-100, -10],
+            [0, 50],
+          ]
+        : [
+            [-150, -50],
+            [0, -90],
+            [160, 10],
+            [160, -20],
+            [-150, 0],
+            [0, 80],
+          ];
+      const scale = Math.min(1, width / 900);
+      const [offsetX, offsetY] = offsets[index];
       const size = labelSizes[index];
       const left = THREE.MathUtils.clamp(
-        (vector.x * 0.5 + 0.5) * width + labelOffset - size.width / 2,
+        (vector.x * 0.5 + 0.5) * width + offsetX * scale - size.width / 2,
         8,
         Math.max(8, width - size.width - 8),
       );
-      let top = (-vector.y * 0.5 + 0.5) * height - size.height;
-      // Compact projected labels move upward when their equipment is close together.
-      for (let pass = 0; pass < markerPositions.length; pass++) {
-        const collision = placedLabels.find(
-          (other) =>
-            left < other.right + 6 &&
-            left + size.width > other.left - 6 &&
-            top < other.bottom + 6 &&
-            top + size.height > other.top - 6,
-        );
-        if (!collision) break;
-        top = collision.top - size.height - 6;
-      }
+      const top = THREE.MathUtils.clamp(
+        (-vector.y * 0.5 + 0.5) * height - size.height + offsetY * scale,
+        8,
+        Math.max(8, height - size.height - 8),
+      );
       element.style.transform = `translate(${left}px,${top}px)`;
-      placedLabels.push({
-        left,
-        right: left + size.width,
-        top,
-        bottom: top + size.height,
-      });
       element.style.visibility =
         vector.z < 1 && Math.abs(vector.x) < 1.15 && Math.abs(vector.y) < 1.15
           ? "visible"
@@ -446,11 +444,17 @@ export function createGardenScene(
   }
   render();
   return {
-    setWireframe(enabled) {
-      // Change model materials without rebuilding geometry or resetting the view.
-      materials.forEach((material) => {
-        material.wireframe = enabled && !solidSurfaces.has(material);
-      });
+    setRevolving(enabled) {
+      controls.autoRotate = enabled && !plan;
+      controls.autoRotateSpeed = 0.55;
+    },
+    setLabelsVisible(visible) {
+      labelsVisible = visible;
+      if (visible)
+        labelSizes = markerElements.map((element) => ({
+          width: element?.offsetWidth || 120,
+          height: element?.offsetHeight || 42,
+        }));
     },
     orbit(delta) {
       if (plan) return;
