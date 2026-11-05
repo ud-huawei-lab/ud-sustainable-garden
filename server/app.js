@@ -8,6 +8,7 @@ import { history } from "./history.js";
 import { createAuth } from "./auth.js";
 import { memoryStore } from "./store.js";
 import { createTickets } from "./tickets.js";
+import { createVisionRouter } from "./vision.js";
 import { allowedEntities, cameras, metrics } from "../shared/catalog.js";
 
 export async function createApp(
@@ -96,12 +97,19 @@ export async function createApp(
   app.use("/auth", auth.router);
   app.use("/api", (req, res, next) => {
     res.set("Cache-Control", "no-store");
-    if (req.method !== "GET") return res.sendStatus(405);
+    if (
+      req.method !== "GET" &&
+      !(req.method === "POST" && req.path === "/ai/analyze")
+    )
+      return res.sendStatus(405);
+    if (req.method === "POST" && !origins.includes(req.headers.origin))
+      return res.sendStatus(403);
     if (req.headers["sec-fetch-site"] === "cross-site")
       return res.sendStatus(403);
     next();
   });
   app.use("/api", auth.requireSession);
+  app.use("/api/ai", createVisionRouter(env));
   app.get("/api/events", (req, res) => {
     // A 204 stops EventSource reconnects; the client uses one-second HTTP reads.
     if (serverless) return res.status(204).end();

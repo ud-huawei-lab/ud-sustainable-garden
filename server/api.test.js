@@ -76,6 +76,7 @@ test("HTTP boundary exposes only garden data, rejects writes, and validates hist
     "/api/cameras/trees/snapshot",
     "/api/cameras/trees/live",
     "/api/video/trees/master.m3u8",
+    "/api/ai/models",
   ])
     assert.equal((await fetch(base + path)).status, 401);
   const login = await fetch(base + "/auth/login", {
@@ -88,6 +89,13 @@ test("HTTP boundary exposes only garden data, rejects writes, and validates hist
   });
   assert.equal(login.status, 200);
   const cookie = login.headers.get("set-cookie").split(";")[0];
+  for (const origin of [undefined, "https://unrelated.example"]) {
+    const response = await fetch(base + "/api/ai/analyze", {
+      method: "POST",
+      headers: { Cookie: cookie, ...(origin ? { Origin: origin } : {}) },
+    });
+    assert.equal(response.status, 403);
+  }
   const request = (url, options = {}) =>
     fetch(url, { ...options, headers: { Cookie: cookie, ...options.headers } });
   const response = await request(`${base}/api/readings`);
