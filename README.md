@@ -4,15 +4,16 @@ React + JSX frontend, Express backend, and an interactive Three.js garden scene.
 
 ## Run locally
 
-Requires Node.js 22 or newer. Copy `.env.example` to `.env` and configure Home Assistant credentials before starting. `.env` is excluded from git.
+Requires Node.js 22 or newer. Copy `.env.example` to `.env`, configure Home Assistant credentials, and set up a dashboard account before starting. `.env` is excluded from git. This device already has the existing dashboard account configured.
 
 ```powershell
 npm ci --ignore-scripts
+npm run auth:setup
 npm run build
 npm start
 ```
 
-Open http://127.0.0.1:5173. For development with hot reload, use `npm run dev` instead of `npm start`. Run one server at a time. For another machine, copy `.env.example` to `.env` and configure the existing Home Assistant account or HA_TOKEN.
+Open http://127.0.0.1:5173 and sign in. For development with hot reload, use `npm run dev` instead of `npm start`. Run one server at a time. The setup command hides password input and saves a salted scrypt hash; it never saves the dashboard password itself. To change credentials, run it again and restart the server, which also invalidates existing sessions.
 
 ## Pages
 
@@ -25,17 +26,25 @@ AI is a disabled visual preview. There are no agent calls or connection-status b
 
 ## Data and security
 
+The branded sign-in screen uses server-side authentication in both development and production. All `/api` routes, including readings, history, SSE, camera images, and HLS segments, require a valid session. The static application shell and logo are public and contain no sensor data or secrets. Browser sessions use random opaque HttpOnly, SameSite=Strict cookies; the server stores only digests of session tokens. There are no authentication tokens in localStorage or sessionStorage. Sessions expire after 12 hours and are revoked on logout or server restart. Logout closes open SSE connections and signs out other tabs.
+
+Login accepts at most eight attempts per client address in 15 minutes, with bounded password-verification concurrency. Unknown usernames and incorrect passwords receive the same error. Login/logout require an allowed Origin, and cross-site API requests are rejected. Requests have bounded bodies; security headers and a production Content Security Policy restrict executable content and framing.
+
 The server signs in to Home Assistant and retains tokens in memory. Authentication steps share one persistent connection because the remote tunnel binds login flows to the request IP. Browser clients only receive allowlisted garden entities and stripped attributes. There is no device-control endpoint or unrestricted HA proxy.
 
-One upstream WebSocket subscribes to state changes, which are coalesced over 250 ms and forwarded using Server-Sent Events. Updates arrive when the source devices publish; a one-second frontend refresh cannot make a slower sensor generate readings faster. Reconnection is automatic. REST readings are cached for one second as an initial-load fallback.
+One upstream WebSocket subscribes to state changes, which are coalesced over 250 ms and forwarded using Server-Sent Events. Updates arrive when the source devices publish; a one-second frontend refresh cannot make a slower sensor generate readings faster. Reconnection is automatic. If a hosting proxy buffers or interrupts SSE, the frontend falls back to one-second HTTP readings until streaming recovers. REST readings are cached for one second.
 
 History is already stored by the HA recorder. This project reads that existing store; it does not create an additional database. Direct InfluxDB v1 querying is implemented as an optional adapter through `INFLUX_URL`, database, and credentials. It is not configured locally because the inspected InfluxDB URL was internal to the HA add-on. Available historical dates depend on the existing recorder retention. Grafana remains available through the History dialog link.
 
 Both mapped cameras are allowlisted. LL-HLS manifests and nested `segment/*.m4s` resources are relayed through the server; upstream stream identifiers and access tokens do not enter the frontend. Cold camera startup over the HA cloud tunnel can take tens of seconds.
 
-The server binds only to loopback by default. Remote binding requires APP_USERNAME and APP_PASSWORD and should sit behind HTTPS. This project has not been deployed publicly.
+The server requires `APP_USERNAME` and `APP_PASSWORD_HASH` and binds only to loopback by default. Local HTTP uses an HttpOnly, SameSite=Strict cookie; it cannot use a Secure cookie without HTTPS. Remote binding requires `APP_ORIGIN=https://your-domain.example` and an HTTPS reverse proxy. HTTPS uses a `__Host-` prefixed Secure cookie, and plaintext remote requests are refused. Set `TRUST_PROXY=loopback` only when a trusted proxy on this machine terminates HTTPS; arbitrary forwarded client headers are otherwise ignored. Do not expose the Node port directly. This project has not been deployed publicly.
+
+Sessions and rate limits are kept in one server process. Running multiple application instances requires a shared session/rate-limit store first. There is one configured dashboard account; this release does not provide account registration, password recovery, or multi-factor authentication.
 
 ## Checks
+
+For hosted deployment, follow [DEPLOYMENT.md](DEPLOYMENT.md). A Vercel static build alone does not run the Node API; `vercel.ts` connects it to the backend defined in `render.yaml`.
 
 ```powershell
 npm test
@@ -44,7 +53,7 @@ npm run build
 npm audit
 ```
 
-Tests cover missing measurements and real zeros, date-range limits, credential filtering, read-only API boundaries, shared authentication, WebSocket changes, and safe nested HLS rewriting. Browser screenshots from local verification are in the ignored `artifacts/` directory.
+Tests cover missing measurements and real zeros, date-range limits, credential filtering, read-only API boundaries, shared HA authentication, WebSocket changes, safe nested HLS rewriting, password validation, cookie tampering, origin checks, login throttling, expiry, logout revocation, and live SSE termination. Browser screenshots from local verification are in the ignored `artifacts/` directory.
 
 ## Reference
 

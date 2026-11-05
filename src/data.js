@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { connectReadings } from "./readings-transport.js";
 export const number = (value) =>
   value == null ||
   String(value).trim() === "" ||
@@ -54,37 +55,18 @@ export function useReadings() {
   });
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    const controller = new AbortController();
     const accept = (data) =>
       setState((previous) =>
         data.error
           ? { ...previous, error: data.error }
           : { ...previous, ...data, error: "" },
       );
-    fetch("/api/readings", { signal: controller.signal })
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then(accept)
-      .catch(() => {});
-    const stream = new EventSource("/api/events");
-    stream.onmessage = (event) => {
-      try {
-        accept(JSON.parse(event.data));
-      } catch {
-        /* Ignore malformed transport messages. */
-      }
-    };
-    stream.onerror = () =>
-      setState((previous) => ({
-        ...previous,
-        error: "Sensor updates were interrupted. Reconnecting automatically.",
-      }));
-    return () => {
-      controller.abort();
-      stream.close();
-    };
+    return connectReadings({
+      onData: accept,
+      onError: (error) => setState((previous) => ({ ...previous, error })),
+      onUnauthorized: () =>
+        window.dispatchEvent(new Event("garden-session-ended")),
+    });
   }, [retry]);
   return { ...state, retry: () => setRetry((v) => v + 1) };
 }

@@ -10,6 +10,7 @@ import {
   AudioLines,
   X,
   Columns3,
+  LogOut,
 } from "lucide-react";
 import { useReadings } from "./data.js";
 import { Headline, Solar, WindPanel, RainPanel, AirPanel } from "./Weather.jsx";
@@ -29,7 +30,7 @@ const currentPage = () => {
   return Object.hasOwn(pages, route) ? route : "home";
 };
 
-export default function App() {
+export default function App({ onSignOut, signingOut }) {
   const data = useReadings();
   const [dark, setDark] = useState(() => {
     try {
@@ -102,13 +103,24 @@ export default function App() {
             </a>
           ))}
         </nav>
-        <button
-          className="icon-button theme-button"
-          onClick={() => setDark((v) => !v)}
-          aria-label={`Switch to ${dark ? "light" : "dark"} mode`}
-        >
-          {dark ? <Sun size={19} /> : <Moon size={19} />}
-        </button>
+        <div className="header-actions">
+          <button
+            className="icon-button"
+            onClick={onSignOut}
+            disabled={signingOut}
+            aria-label={signingOut ? "Signing out" : "Sign out"}
+            title="Sign out"
+          >
+            <LogOut size={18} strokeWidth={1.5} />
+          </button>
+          <button
+            className="icon-button theme-button"
+            onClick={() => setDark((v) => !v)}
+            aria-label={`Switch to ${dark ? "light" : "dark"} mode`}
+          >
+            {dark ? <Sun size={19} /> : <Moon size={19} />}
+          </button>
+        </div>
       </header>
       <main id="page-content" tabIndex={-1} className={`page-${page}`}>
         <div className="page-intro">

@@ -1,24 +1,47 @@
 import express from "express";
-import { timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { HomeAssistant } from "./ha.js";
 import { RealtimeReadings } from "./realtime.js";
 import { mediaPath, rewritePlaylist } from "./media.js";
 import { historyRange } from "./data.js";
 import { history } from "./history.js";
+import { createAuth } from "./auth.js";
 import { allowedEntities, cameras, metrics } from "../shared/catalog.js";
 
 const env = process.env;
 const host = env.HOST || "127.0.0.1";
 const port = Number(env.PORT || 5173);
+const loopback = ["127.0.0.1", "localhost", "::1"].includes(host);
+const publicOrigin = env.APP_ORIGIN ? new URL(env.APP_ORIGIN) : null;
 if (
-  !["127.0.0.1", "localhost", "::1"].includes(host) &&
-  (!env.APP_USERNAME || !env.APP_PASSWORD)
-) {
-  throw new Error("Remote binding requires APP_USERNAME and APP_PASSWORD.");
-}
+  publicOrigin &&
+  (publicOrigin.protocol !== "https:" || publicOrigin.origin !== env.APP_ORIGIN)
+)
+  throw new Error("APP_ORIGIN must be an HTTPS origin without a path.");
+if (!loopback && !publicOrigin)
+  throw new Error("Remote binding requires an HTTPS APP_ORIGIN.");
+const origins = publicOrigin
+  ? [publicOrigin.origin]
+  : [
+      `http://127.0.0.1:${port}`,
+      `http://localhost:${port}`,
+      `http://[::1]:${port}`,
+    ];
+const auth = createAuth({
+  username: env.APP_USERNAME,
+  passwordHash: env.APP_PASSWORD_HASH,
+  origins,
+  secure: Boolean(publicOrigin),
+});
 const app = express();
 app.disable("x-powered-by");
+if (env.TRUST_PROXY === "loopback") app.set("trust proxy", "loopback");
+else if (env.TRUST_PROXY === "1") app.set("trust proxy", 1);
+// The hosting platform checks this directly over its internal HTTP network.
+// It reveals no data or configuration and does not establish a session.
+app.get("/healthz", (req, res) =>
+  res.set("Cache-Control", "no-store").json({ ok: true }),
+);
 const ha = new HomeAssistant(env);
 const cache = new Map();
 const streams = new Map();
@@ -28,40 +51,30 @@ let statesPromise;
 const realtime = new RealtimeReadings(ha, (snapshot) => {
   statesCache = { at: Date.now(), data: snapshot };
 });
-const equal = (a, b) => {
-  const x = Buffer.from(a),
-    y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-};
 app.use((req, res, next) => {
   const allowedHosts = new Set([
     `localhost:${port}`,
     `127.0.0.1:${port}`,
     `[::1]:${port}`,
   ]);
-  if (
-    ["127.0.0.1", "localhost", "::1"].includes(host) &&
-    !allowedHosts.has(req.headers.host)
-  )
+  if (publicOrigin) allowedHosts.add(publicOrigin.host);
+  if (loopback && !allowedHosts.has(req.headers.host))
     return res.sendStatus(403);
   res.set({
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "X-Frame-Options": "SAMEORIGIN",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy": `default-src 'self'; script-src 'self'${process.argv.includes("--production") ? "" : " 'unsafe-inline'"}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'`,
   });
-  if (env.APP_USERNAME && env.APP_PASSWORD) {
-    const expected = `${env.APP_USERNAME}:${env.APP_PASSWORD}`;
-    const actual = req.headers.authorization?.startsWith("Basic ")
-      ? Buffer.from(req.headers.authorization.slice(6), "base64").toString()
-      : "";
-    if (!equal(actual, expected))
-      return res
-        .set("WWW-Authenticate", 'Basic realm="UD Sustainable Garden"')
-        .status(401)
-        .send("Sign in to view the garden.");
-  }
+  if (publicOrigin && !req.secure)
+    return res
+      .status(426)
+      .json({ error: "Use HTTPS to access this dashboard." });
+  if (req.secure) res.set("Strict-Transport-Security", "max-age=31536000");
   next();
 });
+app.use("/auth", auth.router);
 app.use("/api", (req, res, next) => {
   res.set("Cache-Control", "no-store");
   if (req.method !== "GET") return res.sendStatus(405);
@@ -69,6 +82,7 @@ app.use("/api", (req, res, next) => {
     return res.sendStatus(403);
   next();
 });
+app.use("/api", auth.requireSession);
 app.get("/api/events", (req, res) => {
   res.set({
     "Content-Type": "text/event-stream",
@@ -83,12 +97,24 @@ app.get("/api/events", (req, res) => {
     ),
   );
   const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), 15000);
+  const detachSession = auth.onSessionEnd(req, () => {
+    res.write("event: session-ended\ndata: {}\n\n");
+    res.end();
+  });
   req.on("close", () => {
+    detachSession();
     clearInterval(heartbeat);
     unsubscribe();
   });
 });
 app.get("/api/readings", async (req, res) => {
+  if (!ha.url || (!env.HA_TOKEN && (!env.HA_USERNAME || !env.HA_PASSWORD)))
+    return res
+      .status(503)
+      .json({
+        error:
+          "The Home Assistant connection is not configured on this server.",
+      });
   if (Date.now() - statesCache.at > 1000 || !statesCache.data) {
     if (!statesPromise)
       statesPromise = ha

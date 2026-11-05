@@ -2,6 +2,8 @@
 
 React + JSX dashboard with a Node backend and a Three.js digital garden. Local-first delivery; no hosting or public deployment.
 
+Authentication: match the original dashboard's branded username/password sign-in. Require a configured account even on localhost, store only a salted password hash, and protect all sensor/history/camera endpoints with server-side sessions. HttpOnly, SameSite=Strict cookies, Secure over HTTPS; 12-hour absolute expiry, immediate logout revocation, cross-tab logout, origin checks, login rate limits, and no browser-readable tokens. Remote access requires a configured HTTPS origin; no public deployment is included.
+
 Version 1: Reading (#/readings) uses the columnar layout exclusively. The former Columnar route opens Reading. Graph values follow the pointer without a slider; keyboard users focus the graph and use arrow keys, Home, or End.
 
 Independent hash routes: Home (#/home), Overview (#/overview), Reading (#/readings), CCTV (#/cameras). Home is the default. Reading combines live readings and history in category columns; the legacy #/history URL opens this same page. Reading owns the full grouped sensor directory; Overview contains only the reference weather layout. The Three.js scene is approximate, based on camera views; two humidity extractors and two plant pots immediately to their right are confirmed by the user. Remove all other trees. More photographs and dimensions are needed for a faithful reconstruction. Do not attach station cabinet readings to the extractors as though they were extractor measurements.
