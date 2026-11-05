@@ -7,11 +7,12 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "node --env-file=.env server/index.js",
+    "dev": "node --env-file-if-exists=.env server/index.js",
     "build": "vite build",
-    "start": "node --env-file=.env server/index.js --production",
+    "start": "node --env-file-if-exists=.env server/index.js --production",
     "test": "node --test server/*.test.js",
-    "check": "node --check server/index.js && node --check server/ha.js"
+    "check": "node --check server/index.js && node --check server/ha.js && node --check server/auth.js",
+    "auth:setup": "node scripts/configure-auth.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
