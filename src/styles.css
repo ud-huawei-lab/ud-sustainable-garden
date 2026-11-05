@@ -2968,12 +2968,20 @@ input {
 }
 
 /* Experimental sustainability tint belongs to the page, not its cards. */
+:root {
+  --page-background: #f7faf8;
+  background: var(--page-background);
+}
 :root body {
-  background: #f7faf8;
+  background: var(--page-background);
   min-height: 100svh;
 }
+:root[data-theme="dark"] {
+  --page-background: #030705;
+  background: var(--page-background);
+}
 :root[data-theme="dark"] body {
-  background: #030705;
+  background: var(--page-background);
 }
 .scene-view-options {
   position: absolute;
@@ -3024,5 +3032,11 @@ input {
   }
   .scene-controls {
     gap: 2px;
+  }
+  .scene-label {
+    padding: 7px 8px;
+  }
+  .scene-label span {
+    display: none;
   }
 }
