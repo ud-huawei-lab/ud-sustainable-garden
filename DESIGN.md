@@ -1,5 +1,7 @@
 # Garden interface
 
+Authentication preserves the original dashboard's centered, understated branded sign-in panel, visible field labels, password-manager autocomplete, neutral submit button, inline errors, and existing light/dark theme. Authenticated navigation includes a labeled logout control. No dashboard data mounts before the server validates the session.
+
 Operate mode: current conditions, individual sensor history, live cameras, and site exploration.
 
 Preserve the user's weather-dashboard reference: University of Dubai branding, fine navigation, large light-weight readings, two top panels and three lower panels on Overview. Home adds the Three.js site view. Every navigation item renders its own page, rather than scrolling to a section.

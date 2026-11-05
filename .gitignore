@@ -6,3 +6,4 @@ dist/
 *.log
 artifacts/
 .playwright-cli/
+.vercel/
