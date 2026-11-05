@@ -20,9 +20,9 @@ Open http://127.0.0.1:5173 and sign in. For development with hot reload, use `np
 - **Home:** Three.js reconstruction with orbit, zoom, keyboard-operable view controls, equipment labels, and real station readings. Two humidity extractors and two pots to their right. Layout and foliage are approximate, not a photogrammetry scan.
 - **Overview:** the weather reference layout with current conditions and bright UV, irradiance, and AQI scales. The full sensor directory is separate.
 - **Reading:** all 23 live readings and their history, grouped into three independent category columns that adapt to two columns on tablets and one on phones. Select any sensor for a centered history dialog with 24-hour, 7-day, 30-day, or custom ranges, Dubai timestamps, and CSV export. Values follow the pointer in an edge-constrained tooltip. There is no graph slider; focus the graph and use arrow keys, Home, or End for keyboard exploration. Old `#/history` and `#/columnar` links open Reading. Cards remain monochrome; color is reserved for measurement scales.
-- **CCTV:** both camera feeds start automatically using HLS.js. Streams are muted by default; fullscreen/expanded views are available. If the upstream camera cannot stream, a snapshot fallback is shown.
+- **CCTV:** both camera feeds start automatically using HLS.js. Streams are muted by default; fullscreen/expanded views are available. Compact playback and sound controls remain available; unavailable streams show a retry action.
 
-AI is a disabled visual preview. There are no agent calls or connection-status badges. Green/yellow/red are used only within measurement scales. Page backgrounds are pure white or black. Home has a collapsible Environment panel and no outer frame.
+The bottom chat can analyze three recent camera frames using installed Ollama vision models on the DGX over a scoped Tailscale gateway. It includes model selection, a colored circular context indicator with actual token counts, and a fixed-height glass reply area that follows new messages while allowing scrollback. Voice controls are omitted for now. There are no connection-status dots; colors are reserved for measurement/context scales and the subtle green page glow. Home has a collapsible Environment panel and a combined motion/settings toolbar at the top.
 
 ## Data and security
 
@@ -62,3 +62,7 @@ The user's `ud-huawei-lab/digital-twin` repository supplied the visual reference
 ### Embedding
 
 The dashboard can be embedded in Home Assistant or other websites. Framing restrictions are intentionally disabled. HTTPS sessions use partitioned cookies so each embedding site has its own sign-in; the parent website cannot read the cookie or call the protected API directly. Browsers must support partitioned cookies for embedded login. Local HTTP retains SameSite=Strict.
+
+## Camera AI
+
+See [bridge/README.md](bridge/README.md) for the DGX gateway, security boundaries, and operational commands. Vercel requires AI_BRIDGE_URL and sensitive AI_BRIDGE_TOKEN. Analysis is manual and read-only; no automatic equipment actions or continuous surveillance loop are configured.

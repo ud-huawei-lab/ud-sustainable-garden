@@ -16,5 +16,6 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check
       - run: npm test
+      - run: python -m unittest discover -s bridge -p '*_test.py'
       - run: npm run build
       - run: npm audit --audit-level=high

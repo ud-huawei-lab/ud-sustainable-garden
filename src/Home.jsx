@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Cctv,
   RotateCcw,
-  Move3D,
   Thermometer,
   Wind,
   Sun,
@@ -51,46 +50,6 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     <section className="twin-page">
       <div className="twin-stage">
         <div ref={host} className="twin-canvas" />
-        <details className="scene-settings">
-          <summary aria-label="Garden view settings" title="View settings">
-            <Settings2 size={18} />
-          </summary>
-          <div className="scene-settings-panel">
-            <div className="view-switch" role="group" aria-label="Garden view">
-              <button
-                aria-pressed={view === "3d"}
-                onClick={() => setView("3d")}
-              >
-                3D
-              </button>
-              <button
-                aria-pressed={view === "2d"}
-                onClick={() => setView("2d")}
-              >
-                2D
-              </button>
-            </div>
-            <label>
-              <span>Revolve</span>
-              <input
-                type="checkbox"
-                role="switch"
-                checked={revolving}
-                disabled={view === "2d"}
-                onChange={(event) => setRevolving(event.target.checked)}
-              />
-            </label>
-            <label>
-              <span>Labels</span>
-              <input
-                type="checkbox"
-                role="switch"
-                checked={showLabels}
-                onChange={(event) => setShowLabels(event.target.checked)}
-              />
-            </label>
-          </div>
-        </details>
         {error && (
           <div className="scene-fallback">
             This browser could not open the 3D view. Use Overview for sensor
@@ -165,13 +124,11 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
             ))}
           </dl>
         </details>
-        <div className="scene-controls">
-          <span>
-            <Move3D size={15} />
-            {view === "2d"
-              ? "Drag to pan · scroll to zoom"
-              : "Drag to orbit · scroll to zoom"}
-          </span>
+        <div
+          className="scene-controls"
+          role="group"
+          aria-label="Garden view controls"
+        >
           <button
             className="icon-button"
             aria-label="Rotate garden left"
@@ -209,11 +166,52 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
           >
             <RotateCcw size={17} />
           </button>
+          <details className="scene-settings">
+            <summary aria-label="Garden view settings" title="View settings">
+              <Settings2 size={18} />
+            </summary>
+            <div className="scene-settings-panel">
+              <div
+                className="view-switch"
+                role="group"
+                aria-label="Garden view"
+              >
+                <button
+                  aria-pressed={view === "3d"}
+                  onClick={() => setView("3d")}
+                >
+                  3D
+                </button>
+                <button
+                  aria-pressed={view === "2d"}
+                  onClick={() => setView("2d")}
+                >
+                  2D
+                </button>
+              </div>
+              <label>
+                <span>Revolve</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={revolving}
+                  disabled={view === "2d"}
+                  onChange={(event) => setRevolving(event.target.checked)}
+                />
+              </label>
+              <label>
+                <span>Labels</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={showLabels}
+                  onChange={(event) => setShowLabels(event.target.checked)}
+                />
+              </label>
+            </div>
+          </details>
         </div>
       </div>
-      <p className="reconstruction-note">
-        Approximate site model · Tubing animation is illustrative.
-      </p>
     </section>
   );
 }
