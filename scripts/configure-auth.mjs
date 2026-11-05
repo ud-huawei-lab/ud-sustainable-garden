@@ -2,6 +2,7 @@ import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
 import { readFile, writeFile } from "node:fs/promises";
 import { hashPassword } from "../server/auth.js";
+import { randomBytes } from "node:crypto";
 
 if (!process.stdin.isTTY)
   throw new Error("Run npm run auth:setup in an interactive terminal.");
@@ -43,6 +44,9 @@ try {
     /^APP_(?:USERNAME|PASSWORD|PASSWORD_HASH)=.*\r?\n?/gm,
     "",
   );
+  if (!/^APP_SESSION_SECRET=.+/m.test(text))
+    text +=
+      "\nAPP_SESSION_SECRET=" + randomBytes(32).toString("base64url") + "\n";
   await writeFile(
     ".env",
     text.trimEnd() +

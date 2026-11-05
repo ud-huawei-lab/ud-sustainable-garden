@@ -6,22 +6,21 @@ import express from "express";
 import { gardenHandler } from "../api/garden.js";
 import { memoryStore } from "./store.js";
 import { hashPassword } from "./auth.js";
+import { randomBytes } from "node:crypto";
 
 test("Vercel serves login, real readings and camera resources across isolated instances", async (t) => {
   const upstream = createServer((req, res) => {
     assert.equal(req.headers.authorization, "Bearer mock-ha-secret");
     if (req.url === "/api/states")
-      return res
-        .setHeader("Content-Type", "application/json")
-        .end(
-          JSON.stringify([
-            {
-              entity_id: "sensor.ambient_weather_temperature",
-              state: "0",
-              attributes: { unit_of_measurement: "°C" },
-            },
-          ]),
-        );
+      return res.setHeader("Content-Type", "application/json").end(
+        JSON.stringify([
+          {
+            entity_id: "sensor.ambient_weather_temperature",
+            state: "0",
+            attributes: { unit_of_measurement: "°C" },
+          },
+        ]),
+      );
     if (req.url.startsWith("/api/hls/mock-camera-secret/"))
       return res
         .setHeader("Content-Type", "application/vnd.apple.mpegurl")
@@ -29,11 +28,12 @@ test("Vercel serves login, real readings and camera resources across isolated in
     res.writeHead(404).end();
   }).listen(0, "127.0.0.1");
   await once(upstream, "listening");
-  const store = memoryStore();
+  const stores = [];
   const env = {
     APP_USERNAME: "garden-test",
     APP_PASSWORD_HASH: await hashPassword("vercel-test-password-only"),
     APP_ORIGIN: "https://garden.example",
+    APP_SESSION_SECRET: randomBytes(32).toString("base64url"),
     VERCEL_URL: "preview.example",
     HA_URL: `http://127.0.0.1:${upstream.address().port}`,
     HA_TOKEN: "mock-ha-secret",
@@ -48,6 +48,8 @@ test("Vercel serves login, real readings and camera resources across isolated in
     upstream.close();
   });
   async function instance() {
+    const store = memoryStore();
+    stores.push(store);
     const app = express();
     app.use(gardenHandler(env, { store }));
     const server = app.listen(0, "127.0.0.1");
@@ -89,7 +91,7 @@ test("Vercel serves login, real readings and camera resources across isolated in
       .status,
     204,
   );
-  await store.set(
+  await stores[0].set(
     "stream:trees",
     {
       base: env.HA_URL + "/api/hls/mock-camera-secret/",
@@ -99,27 +101,30 @@ test("Vercel serves login, real readings and camera resources across isolated in
     },
     60000,
   );
-  const camera = await request(second, "api/cameras/trees/live", {
+  const camera = await request(first, "api/cameras/trees/live", {
     headers: { Cookie: cookie },
   });
-  assert.deepEqual(await camera.json(), {
-    url: "/api/video/trees/master.m3u8",
-  });
-  const playlist = await request(second, "api/video/trees/master.m3u8", {
+  const cameraData = await camera.json();
+  assert.ok(!cameraData.url.includes("mock-camera-secret"));
+  assert.match(cameraData.url, /^\/api\/video\/trees\/[\w.-]+\/master.m3u8$/);
+  const playlist = await request(second, cameraData.url.slice(1), {
     headers: { Cookie: cookie },
   });
   const text = await playlist.text();
   assert.equal(playlist.status, 200);
   assert.ok(!text.includes("mock-camera-secret"));
-  assert.match(text, /\/api\/video\/trees\/segment\/0.1.m4s/);
-  await request(second, "auth/logout", {
+  assert.match(text, /\/api\/video\/trees\/[\w.-]+\/segment\/0.1.m4s/);
+  const logout = await request(second, "auth/logout", {
     method: "POST",
     headers: { Cookie: cookie },
   });
+  assert.match(logout.headers.get("set-cookie"), /Expires=Thu, 01 Jan 1970/);
+  assert.equal((await request(first, "api/readings")).status, 401);
+  // Stateless logout clears the browser cookie; a copied token lasts until expiry.
   assert.equal(
     (await request(first, "api/readings", { headers: { Cookie: cookie } }))
       .status,
-    401,
+    200,
   );
 });
 

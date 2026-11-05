@@ -26,7 +26,7 @@ AI is a disabled visual preview. There are no agent calls or connection-status b
 
 ## Data and security
 
-The branded sign-in screen uses server-side authentication in both development and production. All `/api` routes, including readings, history, SSE, camera images, and HLS segments, require a valid session. The static application shell and logo are public and contain no sensor data or secrets. Browser sessions use random opaque HttpOnly, SameSite=Strict cookies; the server stores only digests of session tokens. There are no authentication tokens in localStorage or sessionStorage. Sessions expire after 12 hours and are revoked on logout or a password-hash change. Local sessions also end on server restart. Logout closes local SSE connections and signs out other tabs.
+The branded sign-in screen uses server-validated authentication in both development and production. All `/api` routes, including readings, history, SSE, camera images, and HLS segments, require a valid session. The static application shell and logo contain no sensor data or secrets. Vercel uses authenticated encrypted HttpOnly/Secure/SameSite=Strict cookies with 30-minute expiry and no external session store. Logout clears the browser cookie and signs out other tabs; a copied cookie remains valid until expiry. Local hosting retains 12-hour in-memory sessions with immediate logout revocation. No auth tokens are stored in localStorage or sessionStorage.
 
 Login accepts at most eight attempts per client address in 15 minutes, with bounded password-verification concurrency. Unknown usernames and incorrect passwords receive the same error. Login/logout require an allowed Origin, and cross-site API requests are rejected. Requests have bounded bodies; security headers and a production Content Security Policy restrict executable content and framing.
 
@@ -40,7 +40,7 @@ Both mapped cameras are allowlisted. LL-HLS manifests and nested `segment/*.m4s`
 
 The server requires `APP_USERNAME` and `APP_PASSWORD_HASH` and binds only to loopback by default. Local HTTP uses an HttpOnly, SameSite=Strict cookie; it cannot use a Secure cookie without HTTPS. Remote binding requires `APP_ORIGIN=https://your-domain.example` and an HTTPS reverse proxy. HTTPS uses a `__Host-` prefixed Secure cookie, and plaintext remote requests are refused. Set `TRUST_PROXY=loopback` only when a trusted proxy on this machine terminates HTTPS; arbitrary forwarded client headers are otherwise ignored. Do not expose the Node port directly. This project has not been deployed publicly.
 
-On Vercel, shared sessions, atomic login limits, and temporary camera stream metadata use a Redis store connected through the Vercel project's Storage tab. Local hosting uses in-memory storage. There is one configured dashboard account; this release does not provide account registration, password recovery, or multi-factor authentication.
+Vercel needs only server environment variables, including `APP_SESSION_SECRET`; no Redis or storage subscription is required. Temporary camera routing context is encrypted and still requires a valid login cookie. Login limits are per function instance. There is one configured dashboard account; this release does not provide account registration, password recovery, or multi-factor authentication.
 
 ## Checks
 
