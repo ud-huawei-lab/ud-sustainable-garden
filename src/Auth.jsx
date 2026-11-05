@@ -209,9 +209,7 @@ export default function Auth() {
   if (checking)
     return (
       <main className="login-page">
-        <p className="secondary" role="status">
-          <Skeleton kind="session" label="Opening dashboard" />
-        </p>
+        <Skeleton kind="session" label="Opening dashboard" />
       </main>
     );
   if (!session) return <Login onSignIn={signIn} connectionError={error} />;

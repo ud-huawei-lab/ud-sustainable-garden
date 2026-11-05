@@ -2836,13 +2836,6 @@ input {
   width: min(420px, 80vw);
   height: 200px;
 }
-nav a.active:after {
-  background: #789b80;
-  height: 2px;
-}
-:root[data-theme="dark"] nav a.active:after {
-  background: #8cad92;
-}
 .clean-camera-grid {
   gap: 16px;
   margin-top: 10px;
@@ -2971,5 +2964,65 @@ nav a.active:after {
 @media (prefers-reduced-motion: reduce) {
   .skeleton-block {
     animation: none;
+  }
+}
+
+/* Experimental sustainability tint belongs to the page, not its cards. */
+:root body {
+  background: #f7faf8;
+  min-height: 100svh;
+}
+:root[data-theme="dark"] body {
+  background: #030705;
+}
+.scene-view-options {
+  position: absolute;
+  top: 20px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+.view-switch {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--base);
+}
+.view-switch button {
+  min-width: 38px;
+  min-height: 32px;
+  border-radius: 5px;
+  color: var(--muted);
+}
+.view-switch button[aria-pressed="true"] {
+  background: var(--line);
+  color: var(--text);
+}
+.wireframe-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  min-height: 38px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--base);
+  border: 1px solid var(--line);
+}
+.wireframe-toggle[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--subtle);
+}
+@media (max-width: 700px) {
+  .scene-view-options {
+    top: 76px;
+    right: 12px;
+    gap: 6px;
+  }
+  .scene-controls {
+    gap: 2px;
   }
 }

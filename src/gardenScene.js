@@ -2,9 +2,15 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 // Camera-informed composition, intentionally approximate rather than survey geometry.
-export function createGardenScene(host, dark, markerElements) {
+export function createGardenScene(
+  host,
+  dark,
+  markerElements,
+  { view = "3d" } = {},
+) {
+  const plan = view === "2d";
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(dark ? "#000000" : "#ffffff");
+  scene.background = new THREE.Color(dark ? "#030705" : "#f7faf8");
   scene.fog = new THREE.Fog(scene.background, 36, 72);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -16,13 +22,21 @@ export function createGardenScene(host, dark, markerElements) {
   host.appendChild(renderer.domElement);
   renderer.domElement.setAttribute(
     "aria-label",
-    "Interactive 3D reconstruction of the sustainable garden",
+    plan
+      ? "Interactive 2D plan of the sustainable garden"
+      : "Interactive 3D reconstruction of the sustainable garden",
   );
   renderer.domElement.setAttribute("role", "img");
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 120);
-  camera.position.set(15, 23, 26);
+  const camera = plan
+    ? new THREE.OrthographicCamera(-14, 14, 12, -12, 0.1, 120)
+    : new THREE.PerspectiveCamera(38, 1, 0.1, 120);
+  camera.position.set(...(plan ? [0, 32, 0.01] : [15, 23, 26]));
+  if (plan) camera.up.set(0, 0, -1);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.8, 1);
+  controls.target.set(0, plan ? 0 : 0.8, plan ? 0 : 1);
+  controls.enableRotate = !plan;
+  controls.minZoom = 0.5;
+  controls.maxZoom = 3;
   controls.enableDamping = true;
   controls.minDistance = 10;
   controls.maxDistance = 40;
@@ -88,8 +102,8 @@ export function createGardenScene(host, dark, markerElements) {
     );
   const ground = box(21, 0.3, 17, "#d2c1a0", 0, -0.22, 0);
   ground.receiveShadow = true;
-  box(21.2, 0.13, 17.2, "#b7a78c", 0, -0.43, 0);
-  box(12.8, 0.16, 7.7, "#b9b7ac", -2.5, 0.02, -3.6);
+  const foundation = box(21.2, 0.13, 17.2, "#b7a78c", 0, -0.43, 0);
+  const equipmentPad = box(12.8, 0.16, 7.7, "#b9b7ac", -2.5, 0.02, -3.6);
   const dummy = new THREE.Object3D();
   let seed = 45;
   const random = () => {
@@ -340,13 +354,32 @@ export function createGardenScene(host, dark, markerElements) {
     [-2, 3.5, 0.65],
   ];
   const vector = new THREE.Vector3();
+  const solidSurfaces = new Set([
+    ground.material,
+    foundation.material,
+    equipmentPad.material,
+    parking.material,
+  ]);
+  const labelSizes = markerElements.map((element) => ({
+    width: element?.offsetWidth || 120,
+    height: element?.offsetHeight || 42,
+  }));
   let frame;
   let disposed = false;
   const resize = () => {
     const { width, height } = host.getBoundingClientRect();
     renderer.setSize(width, height, false);
-    camera.aspect = width / height;
-    camera.zoom = Math.min(1, camera.aspect * 1.15);
+    const aspect = width / Math.max(1, height);
+    if (plan) {
+      const halfHeight = Math.max(11, 13 / aspect);
+      camera.left = -halfHeight * aspect;
+      camera.right = halfHeight * aspect;
+      camera.top = halfHeight;
+      camera.bottom = -halfHeight;
+    } else {
+      camera.aspect = aspect;
+      camera.zoom = Math.min(1, aspect * 1.15);
+    }
     camera.updateProjectionMatrix();
   };
   const observer = new ResizeObserver(resize);
@@ -371,12 +404,38 @@ export function createGardenScene(host, dark, markerElements) {
     renderer.render(scene, camera);
     const width = host.clientWidth,
       height = host.clientHeight;
+    const placedLabels = [];
     markerPositions.forEach((position, index) => {
       const element = markerElements[index];
       if (!element) return;
       vector.set(...position).project(camera);
       const labelOffset = index === 4 ? -65 : index === 5 ? 55 : 0;
-      element.style.transform = `translate(-50%,-100%) translate(${(vector.x * 0.5 + 0.5) * width + labelOffset}px,${(-vector.y * 0.5 + 0.5) * height}px)`;
+      const size = labelSizes[index];
+      const left = THREE.MathUtils.clamp(
+        (vector.x * 0.5 + 0.5) * width + labelOffset - size.width / 2,
+        8,
+        Math.max(8, width - size.width - 8),
+      );
+      let top = (-vector.y * 0.5 + 0.5) * height - size.height;
+      // Compact projected labels move upward when their equipment is close together.
+      for (let pass = 0; pass < markerPositions.length; pass++) {
+        const collision = placedLabels.find(
+          (other) =>
+            left < other.right + 6 &&
+            left + size.width > other.left - 6 &&
+            top < other.bottom + 6 &&
+            top + size.height > other.top - 6,
+        );
+        if (!collision) break;
+        top = collision.top - size.height - 6;
+      }
+      element.style.transform = `translate(${left}px,${top}px)`;
+      placedLabels.push({
+        left,
+        right: left + size.width,
+        top,
+        bottom: top + size.height,
+      });
       element.style.visibility =
         vector.z < 1 && Math.abs(vector.x) < 1.15 && Math.abs(vector.y) < 1.15
           ? "visible"
@@ -386,7 +445,14 @@ export function createGardenScene(host, dark, markerElements) {
   }
   render();
   return {
+    setWireframe(enabled) {
+      // Change model materials without rebuilding geometry or resetting the view.
+      materials.forEach((material) => {
+        material.wireframe = enabled && !solidSurfaces.has(material);
+      });
+    },
     orbit(delta) {
+      if (plan) return;
       camera.position
         .sub(controls.target)
         .applyAxisAngle(new THREE.Vector3(0, 1, 0), delta)
@@ -394,14 +460,23 @@ export function createGardenScene(host, dark, markerElements) {
       controls.update();
     },
     zoom(factor) {
+      if (plan) {
+        camera.zoom = THREE.MathUtils.clamp(camera.zoom / factor, 0.5, 3);
+        camera.updateProjectionMatrix();
+        return;
+      }
       const offset = camera.position.clone().sub(controls.target);
       offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, 10, 40));
       camera.position.copy(controls.target).add(offset);
       controls.update();
     },
     reset() {
-      camera.position.set(15, 23, 26);
-      controls.target.set(0, 0.8, 1);
+      camera.position.set(...(plan ? [0, 32, 0.01] : [15, 23, 26]));
+      controls.target.set(0, plan ? 0 : 0.8, plan ? 0 : 1);
+      if (plan) {
+        camera.zoom = 1;
+        camera.updateProjectionMatrix();
+      }
       controls.update();
     },
     dispose() {
