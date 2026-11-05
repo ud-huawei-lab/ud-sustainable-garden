@@ -160,7 +160,7 @@ function SensorTile({ sensor, entities, onSelect, featured }) {
     </button>
   );
 }
-export default function ReadingPage({ entities, onSelect, layout = "mosaic" }) {
+export default function ReadingPage({ entities, onSelect }) {
   const renderGroup = (group) => {
     const sensors = sensorReadings.filter((sensor) =>
       group.types.includes(sensor.group),
@@ -192,7 +192,7 @@ export default function ReadingPage({ entities, onSelect, layout = "mosaic" }) {
   };
   return (
     <section
-      className={`reading-page ${layout === "columnar" ? "reading-columnar" : ""}`}
+      className="reading-page reading-columnar"
       aria-labelledby="reading-heading"
     >
       <div className="reading-intro">
@@ -206,19 +206,17 @@ export default function ReadingPage({ entities, onSelect, layout = "mosaic" }) {
         <span>23 sensors · 7 categories</span>
       </div>
       <div className="reading-mosaic">
-        {layout === "columnar"
-          ? [
-              ["temperature", "solar"],
-              ["wind", "humidity", "pressure"],
-              ["air", "rain"],
-            ].map((keys, index) => (
-              <div className="reading-column" key={index}>
-                {keys.map((key) =>
-                  renderGroup(groups.find((group) => group.key === key)),
-                )}
-              </div>
-            ))
-          : groups.map(renderGroup)}
+        {[
+          ["temperature", "solar"],
+          ["wind", "humidity", "pressure"],
+          ["air", "rain"],
+        ].map((keys, index) => (
+          <div className="reading-column" key={index}>
+            {keys.map((key) =>
+              renderGroup(groups.find((group) => group.key === key)),
+            )}
+          </div>
+        ))}
       </div>
     </section>
   );

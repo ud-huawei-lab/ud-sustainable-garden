@@ -4,7 +4,7 @@ React + JSX frontend, Express backend, and an interactive Three.js garden scene.
 
 ## Run locally
 
-Requires Node.js 22 or newer. The local `.env` is already configured on this device and is excluded from git.
+Requires Node.js 22 or newer. Copy `.env.example` to `.env` and configure Home Assistant credentials before starting. `.env` is excluded from git.
 
 ```powershell
 npm ci --ignore-scripts
@@ -18,8 +18,7 @@ Open http://127.0.0.1:5173. For development with hot reload, use `npm run dev` i
 
 - **Home:** Three.js reconstruction with orbit, zoom, keyboard-operable view controls, equipment labels, and real station readings. Two humidity extractors and two pots to their right. Layout and foliage are approximate, not a photogrammetry scan.
 - **Overview:** the weather reference layout with current conditions and bright UV, irradiance, and AQI scales. The full sensor directory is separate.
-- **Reading:** a single page combines all 23 live readings with their history. An asymmetric layout gives temperature and wind larger feature tiles, pairs humidity, uses a wide solar section, and compacts rainfall and air quality. Select any sensor for a centered history dialog with 24-hour, 7-day, 30-day, or custom ranges, Dubai timestamps, and CSV export. Chart values follow the pointer in an edge-constrained tooltip; the timeline remains keyboard accessible. The old `#/history` link opens this same page. Cards remain monochrome; color is reserved for measurement scales.
-- **Columnar:** an alternative `#/columnar` tab presents the same sensors and history in three independent category columns, adapting to two columns on tablets and one on phones. Keep both layouts available for comparison.
+- **Reading:** all 23 live readings and their history, grouped into three independent category columns that adapt to two columns on tablets and one on phones. Select any sensor for a centered history dialog with 24-hour, 7-day, 30-day, or custom ranges, Dubai timestamps, and CSV export. Values follow the pointer in an edge-constrained tooltip. There is no graph slider; focus the graph and use arrow keys, Home, or End for keyboard exploration. Old `#/history` and `#/columnar` links open Reading. Cards remain monochrome; color is reserved for measurement scales.
 - **CCTV:** both camera feeds start automatically using HLS.js. Streams are muted by default; fullscreen/expanded views are available. If the upstream camera cannot stream, a snapshot fallback is shown.
 
 AI is a disabled visual preview. There are no agent calls or connection-status badges. Green/yellow/red are used only within measurement scales. Page backgrounds are pure white or black. Home has a collapsible Environment panel and no outer frame.

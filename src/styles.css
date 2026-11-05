@@ -698,14 +698,6 @@ main {
   color: var(--muted);
   flex-wrap: wrap;
 }
-.chart-scrubber {
-  width: calc(100% - 58px);
-  height: 3px;
-  margin: 9px 10px 15px 48px;
-  accent-color: #a1753b;
-  display: block;
-  opacity: 0.65;
-}
 .chart-empty {
   min-height: 290px;
   display: flex;
@@ -2556,7 +2548,7 @@ input {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
-/* Alternate columnar view; the original Reading composition remains available. */
+/* Reading: independent category columns. */
 .reading-columnar .reading-mosaic {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 26px;
@@ -2662,6 +2654,6 @@ input {
 }
 @media (max-width: 850px) {
   nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

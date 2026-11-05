@@ -9,7 +9,6 @@ import {
   Mic,
   AudioLines,
   X,
-  Gauge,
   Columns3,
 } from "lucide-react";
 import { useReadings } from "./data.js";
@@ -22,12 +21,11 @@ const pages = {
   home: "Digital garden",
   overview: "Current readings",
   readings: "Reading & history",
-  columnar: "Columnar reading",
   cameras: "Garden CCTV",
 };
 const currentPage = () => {
   const route = location.hash.replace("#/", "");
-  if (route === "history" || route === "reading") return "readings";
+  if (["history", "reading", "columnar"].includes(route)) return "readings";
   return Object.hasOwn(pages, route) ? route : "home";
 };
 
@@ -90,8 +88,7 @@ export default function App() {
           {[
             ["home", "Home", Box],
             ["overview", "Overview", LayoutGrid],
-            ["readings", "Reading", Gauge],
-            ["columnar", "Columnar", Columns3],
+            ["readings", "Reading", Columns3],
             ["cameras", "CCTV", Cctv],
           ].map(([id, label, Icon]) => (
             <a
@@ -159,13 +156,6 @@ export default function App() {
         )}
         {page === "readings" && (
           <ReadingPage entities={data.entities} onSelect={showHistory} />
-        )}
-        {page === "columnar" && (
-          <ReadingPage
-            entities={data.entities}
-            onSelect={showHistory}
-            layout="columnar"
-          />
         )}
         {page === "cameras" && <Cameras />}
         <footer className="page-footer">

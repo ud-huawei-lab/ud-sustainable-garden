@@ -78,6 +78,27 @@ function Chart({ data, metric }) {
       <svg
         viewBox={`0 0 ${width} 286`}
         role="img"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+            return;
+          event.preventDefault();
+          setPointer(null);
+          setHover((value) =>
+            event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? 1
+                : Math.max(
+                    0,
+                    Math.min(
+                      1,
+                      (value ?? 0) +
+                        (event.key === "ArrowRight" ? 0.01 : -0.01),
+                    ),
+                  ),
+          );
+        }}
         aria-label={`${metric.label} history from ${time(data.start, { day: "numeric", month: "short" })} to ${time(data.end, { day: "numeric", month: "short" })}`}
         onPointerMove={(event) => {
           const box = event.currentTarget.getBoundingClientRect();
@@ -221,7 +242,8 @@ function Chart({ data, metric }) {
       <div className="chart-detail" aria-live="polite">
         {hoverTime == null ? (
           <span>
-            Hover over the chart to explore readings, or use the timeline below.
+            Hover over the chart to explore readings, or focus it and use the
+            arrow keys.
           </span>
         ) : (
           <>
@@ -234,18 +256,6 @@ function Chart({ data, metric }) {
           </>
         )}
       </div>
-      <input
-        className="chart-scrubber"
-        type="range"
-        min="0"
-        max="1000"
-        value={hover == null ? 0 : Math.round(hover * 1000)}
-        onChange={(e) => {
-          setPointer(null);
-          setHover(Number(e.target.value) / 1000);
-        }}
-        aria-label="Explore historical readings"
-      />
     </div>
   );
 }
