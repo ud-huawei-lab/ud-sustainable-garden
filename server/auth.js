@@ -25,7 +25,8 @@ export function createAuth(
   { username, passwordHash, origins = [], secure = true } = {},
   {
     now = Date.now,
-    sessionMs = 12 * 3600000,
+    tickets,
+    sessionMs = tickets ? 30 * 60000 : 12 * 3600000,
     maxAttempts = 8,
     store = memoryStore({ now }),
   } = {},
@@ -61,10 +62,12 @@ export function createAuth(
       .filter((value) => value.startsWith(cookieName + "="));
     if (cookies.length !== 1) return null;
     const token = cookies[0].slice(cookieName.length + 1);
+    if (tickets)
+      return token.length <= 2000 && /^[\w.-]+$/.test(token) ? token : null;
     return /^[\w-]{43}$/.test(token) ? digest(token).toString("hex") : null;
   };
   const revoke = async (key) => {
-    await store.delete("session:" + key);
+    if (!tickets) await store.delete("session:" + key);
     const session = sessions.get(key);
     if (!session) return;
     sessions.delete(key);
@@ -74,7 +77,11 @@ export function createAuth(
   };
   const readSession = async (req) => {
     const key = tokenFrom(req);
-    const session = key ? await store.get("session:" + key) : null;
+    const session = key
+      ? tickets
+        ? tickets.open("session", key)
+        : await store.get("session:" + key)
+      : null;
     if (!session && sessions.has(key)) await revoke(key);
     if (
       session &&
@@ -152,19 +159,23 @@ export function createAuth(
         const old = tokenFrom(req);
         if (old) await revoke(old);
         if (sessions.size >= 100) await revoke(sessions.keys().next().value);
-        const token = randomBytes(32).toString("base64url");
-        const tokenKey = digest(token).toString("hex");
         const value = {
           user: username,
           expiresAt: now() + sessionMs,
           version: credentialVersion,
         };
-        await store.set("session:" + tokenKey, value, sessionMs);
-        const session = { listeners: new Set() };
-        session.timer = setTimeout(() => {
-          revoke(tokenKey).catch(() => {});
-        }, sessionMs).unref();
-        sessions.set(tokenKey, session);
+        const token = tickets
+          ? tickets.seal("session", value, sessionMs)
+          : randomBytes(32).toString("base64url");
+        if (!tickets) {
+          const tokenKey = digest(token).toString("hex");
+          await store.set("session:" + tokenKey, value, sessionMs);
+          const session = { listeners: new Set() };
+          session.timer = setTimeout(() => {
+            revoke(tokenKey).catch(() => {});
+          }, sessionMs).unref();
+          sessions.set(tokenKey, session);
+        }
         res
           .cookie(cookieName, token, cookieOptions)
           .json({ user: username, expiresAt: value.expiresAt });

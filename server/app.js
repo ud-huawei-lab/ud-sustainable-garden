@@ -6,7 +6,8 @@ import { mediaPath, rewritePlaylist } from "./media.js";
 import { historyRange } from "./data.js";
 import { history } from "./history.js";
 import { createAuth } from "./auth.js";
-import { memoryStore, redisStore } from "./store.js";
+import { memoryStore } from "./store.js";
+import { createTickets } from "./tickets.js";
 import { allowedEntities, cameras, metrics } from "../shared/catalog.js";
 
 export async function createApp(
@@ -40,7 +41,8 @@ export async function createApp(
       ];
   if (serverless && env.VERCEL_URL)
     origins.push(new URL(`https://${env.VERCEL_URL}`).origin);
-  const store = suppliedStore || (serverless ? redisStore(env) : memoryStore());
+  const store = suppliedStore || memoryStore();
+  const tickets = serverless ? createTickets(env.APP_SESSION_SECRET) : null;
   const auth = createAuth(
     {
       username: env.APP_USERNAME,
@@ -48,7 +50,7 @@ export async function createApp(
       origins,
       secure: Boolean(publicOrigin),
     },
-    { store },
+    { store, tickets },
   );
   const app = express();
   app.disable("x-powered-by");
@@ -199,6 +201,8 @@ export async function createApp(
     res.json(data);
   });
   const cameraFor = (id) => cameras.find((c) => c.id === id);
+  const streamUrl = (id, stream) =>
+    `/api/video/${id}/${tickets ? tickets.seal("camera", { ...stream, id }, Math.max(1, stream.expires - Date.now())) + "/" : ""}${new URL(stream.playlist).pathname.split("/").pop()}`;
   app.get("/api/cameras/:id/snapshot", async (req, res) => {
     const camera = cameraFor(req.params.id);
     if (!camera) return res.sendStatus(404);
@@ -239,7 +243,7 @@ export async function createApp(
     const existing = await store.get("stream:" + camera.id);
     if (existing && Date.now() - existing.lastUsed < 30000)
       return res.json({
-        url: `/api/video/${camera.id}/${new URL(existing.playlist).pathname.split("/").pop()}`,
+        url: streamUrl(camera.id, existing),
       });
     const result = await ha.command({
       type: "camera/stream",
@@ -251,54 +255,63 @@ export async function createApp(
       !url.pathname.startsWith("/api/hls/")
     )
       throw new Error("Unsupported camera stream.");
-    await store.set(
-      "stream:" + camera.id,
-      {
-        base: new URL(".", url).href,
-        playlist: url.href,
-        expires: Date.now() + 3600000,
-        lastUsed: Date.now(),
-      },
-      3600000,
-    );
+    const stream = {
+      base: new URL(".", url).href,
+      playlist: url.href,
+      expires: Date.now() + 3600000,
+      lastUsed: Date.now(),
+    };
+    await store.set("stream:" + camera.id, stream, 3600000);
     res.json({
-      url: `/api/video/${camera.id}/${url.pathname.split("/").pop()}`,
+      url: streamUrl(camera.id, stream),
     });
   });
-  app.get(/^\/api\/video\/([a-z]+)\/([\w./-]+)$/, async (req, res) => {
-    const id = req.params[0];
-    const stream = await store.get("stream:" + id);
-    const file = req.params[1];
-    if (!stream || stream.expires < Date.now() || !mediaPath(file))
-      return res.sendStatus(404);
-    if (Date.now() - stream.lastUsed > 15000) {
-      stream.lastUsed = Date.now();
-      await store.set(
-        "stream:" + id,
-        stream,
-        Math.max(1, stream.expires - Date.now()),
+  app.get(
+    /^\/api\/video\/([a-z]+)\/(?:([\w-]+\.[\w-]+\.[\w-]+)\/)?([\w./-]+)$/,
+    async (req, res) => {
+      const id = req.params[0];
+      const ticket = req.params[1];
+      const stream = serverless
+        ? tickets.open("camera", ticket)
+        : await store.get("stream:" + id);
+      const file = req.params[2];
+      if (serverless && stream?.id !== id) return res.sendStatus(404);
+      if (!stream || stream.expires < Date.now() || !mediaPath(file))
+        return res.sendStatus(404);
+      if (!serverless && Date.now() - stream.lastUsed > 15000) {
+        stream.lastUsed = Date.now();
+        await store.set(
+          "stream:" + id,
+          stream,
+          Math.max(1, stream.expires - Date.now()),
+        );
+      }
+      const path = new URL(file, stream.base);
+      for (const key of ["_HLS_msn", "_HLS_part", "_HLS_skip"]) {
+        const value = req.query[key];
+        if (typeof value === "string" && /^(?:\d{1,12}|YES|v2)$/.test(value))
+          path.searchParams.set(key, value);
+      }
+      const upstream = await ha.raw(
+        path.pathname + path.search,
+        AbortSignal.timeout(file.endsWith(".m3u8") ? 65000 : 25000),
       );
-    }
-    const path = new URL(file, stream.base);
-    for (const key of ["_HLS_msn", "_HLS_part", "_HLS_skip"]) {
-      const value = req.query[key];
-      if (typeof value === "string" && /^(?:\d{1,12}|YES|v2)$/.test(value))
-        path.searchParams.set(key, value);
-    }
-    const upstream = await ha.raw(
-      path.pathname + path.search,
-      AbortSignal.timeout(file.endsWith(".m3u8") ? 65000 : 25000),
-    );
-    if (!upstream.ok) return res.sendStatus(502);
-    if (file.endsWith(".m3u8")) {
-      const text = await upstream.text();
-      const playlist = rewritePlaylist(text, new URL(stream.base), id);
-      return res.type("application/vnd.apple.mpegurl").send(playlist);
-    }
-    res
-      .type(upstream.headers.get("content-type") || "video/mp2t")
-      .send(Buffer.from(await upstream.arrayBuffer()));
-  });
+      if (!upstream.ok) return res.sendStatus(502);
+      if (file.endsWith(".m3u8")) {
+        const text = await upstream.text();
+        const playlist = rewritePlaylist(
+          text,
+          new URL(stream.base),
+          id,
+          ticket,
+        );
+        return res.type("application/vnd.apple.mpegurl").send(playlist);
+      }
+      res
+        .type(upstream.headers.get("content-type") || "video/mp2t")
+        .send(Buffer.from(await upstream.arrayBuffer()));
+    },
+  );
   app.use("/api", (req, res) =>
     res.status(404).json({ error: "This endpoint is not available." }),
   );
@@ -307,11 +320,9 @@ export async function createApp(
     console.error(
       `[${new Date().toISOString()}] ${req.path}: upstream request failed`,
     );
-    res
-      .status(502)
-      .json({
-        error: "The garden data could not be loaded. Please try again.",
-      });
+    res.status(502).json({
+      error: "The garden data could not be loaded. Please try again.",
+    });
   });
   if (serverless) {
     app.use((req, res) =>

@@ -1,7 +1,7 @@
 export const mediaPath = (path) =>
   /^(?:segment\/)?[\w.-]+\.(?:m3u8|ts|m4s|mp4)$/.test(path) &&
   !path.includes("..");
-export function rewritePlaylist(text, base, cameraId) {
+export function rewritePlaylist(text, base, cameraId, ticket = "") {
   const rewrite = (uri) => {
     const target = new URL(uri, base);
     if (
@@ -11,7 +11,7 @@ export function rewritePlaylist(text, base, cameraId) {
       throw new Error("Unsupported playlist resource.");
     const relative = target.pathname.slice(base.pathname.length);
     if (!mediaPath(relative)) throw new Error("Unsupported media path.");
-    return `/api/video/${cameraId}/${relative}`;
+    return `/api/video/${cameraId}/${ticket ? ticket + "/" : ""}${relative}`;
   };
   return text
     .split("\n")

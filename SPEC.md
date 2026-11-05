@@ -1,8 +1,8 @@
 # UD Sustainable Garden
 
-React + JSX dashboard with a Node backend and a Three.js digital garden. Support local hosting and a single Vercel project for the frontend and API. Shared sessions, login limits, and temporary camera metadata use Redis connected through Vercel Storage. No separate application hosting service is required.
+React + JSX dashboard with a Node backend and a Three.js digital garden. Support local hosting and a single Vercel project for the frontend and API. Vercel uses authenticated encrypted session cookies and camera routing context, with no Redis, database, or separate application host.
 
-Authentication: match the original dashboard's branded username/password sign-in. Require a configured account even on localhost, store only a salted password hash, and protect all sensor/history/camera endpoints with server-side sessions. HttpOnly, SameSite=Strict cookies, Secure over HTTPS; 12-hour absolute expiry, immediate logout revocation, cross-tab logout, origin checks, login rate limits, and no browser-readable tokens. Remote access requires a configured HTTPS origin; no public deployment is included.
+Authentication: match the original dashboard's branded username/password sign-in. Require a configured account even on localhost and store only a salted password hash. Protect all data and camera routes with HttpOnly/SameSite=Strict cookies, Secure over HTTPS. Vercel sessions expire after 30 minutes; logout clears the browser cookie but cannot revoke a copied cookie without shared storage. Local sessions retain 12-hour expiry and immediate revocation. Use origin checks, per-instance login limits, bounded hashing concurrency, and no script-readable tokens.
 
 Version 1: Reading (#/readings) uses the columnar layout exclusively. The former Columnar route opens Reading. Graph values follow the pointer without a slider; keyboard users focus the graph and use arrow keys, Home, or End.
 
