@@ -1,17 +1,30 @@
 import { useEffect, useRef, useState } from "react";
-import { Maximize2, VideoOff, RotateCcw } from "lucide-react";
+import {
+  Maximize2,
+  VideoOff,
+  RotateCcw,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  SkipForward,
+} from "lucide-react";
 import { cameras } from "../shared/catalog.js";
 import Skeleton from "./Skeleton.jsx";
 
 export function LivePlayer({ camera }) {
   const video = useRef(null);
   const container = useRef(null);
+  const liveEngine = useRef(null);
   const [error, setError] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [buffering, setBuffering] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [clock, setClock] = useState("");
   const [expandError, setExpandError] = useState("");
+  const [paused, setPaused] = useState(true);
+  const [muted, setMuted] = useState(true);
+  const [volume, setVolume] = useState(1);
   useEffect(() => {
     const tick = () =>
       setClock(
@@ -41,6 +54,7 @@ export function LivePlayer({ camera }) {
     const onPlaying = () => {
       clearTimeout(timeout);
       setPlaying(true);
+      setPaused(false);
       setBuffering(false);
       setError(false);
     };
@@ -70,6 +84,7 @@ export function LivePlayer({ camera }) {
             manifestLoadingTimeOut: 30000,
             levelLoadingTimeOut: 65000,
           });
+          liveEngine.current = hls;
           hls.on(Hls.Events.ERROR, (_, data) => {
             if (!data.fatal || controller.signal.aborted) return;
             if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !recoveredMedia) {
@@ -93,6 +108,7 @@ export function LivePlayer({ camera }) {
       media.removeEventListener("playing", onPlaying);
       media.removeEventListener("error", fail);
       hls?.destroy();
+      liveEngine.current = null;
       media.pause();
       media.removeAttribute("src");
       media.load();
@@ -103,12 +119,15 @@ export function LivePlayer({ camera }) {
       <video
         ref={video}
         autoPlay
-        muted
+        muted={muted}
         playsInline
-        disablePictureInPicture
         aria-label={`${camera.name} live feed`}
         onWaiting={() => setBuffering(true)}
         onStalled={() => setBuffering(true)}
+        onPause={() => {
+          setPaused(true);
+          setBuffering(false);
+        }}
       />
       {!playing && !error && (
         <Skeleton kind="camera" label={`Loading ${camera.name}`} />
@@ -132,6 +151,82 @@ export function LivePlayer({ camera }) {
           >
             <RotateCcw size={15} />
             Try again
+          </button>
+        </div>
+      )}
+      {playing && !error && (
+        <div
+          className="feed-controls"
+          role="toolbar"
+          aria-label={`${camera.name} playback controls`}
+        >
+          <button
+            aria-label={`${paused ? "Play" : "Pause"} ${camera.name}`}
+            onClick={async () => {
+              try {
+                if (video.current.paused) await video.current.play();
+                else video.current.pause();
+                setExpandError("");
+              } catch {
+                setExpandError("Playback could not resume. Try again.");
+              }
+            }}
+          >
+            {paused ? <Play size={16} /> : <Pause size={16} />}
+          </button>
+          <button
+            aria-label={`${muted ? "Unmute" : "Mute"} ${camera.name}`}
+            onClick={() => {
+              if (muted && volume === 0) {
+                video.current.volume = 1;
+                setVolume(1);
+              }
+              video.current.muted = !muted;
+              setMuted(!muted);
+            }}
+          >
+            {muted || volume === 0 ? (
+              <VolumeX size={16} />
+            ) : (
+              <Volume2 size={16} />
+            )}
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={muted ? 0 : volume}
+            aria-label={`${camera.name} volume`}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              video.current.volume = value;
+              video.current.muted = value === 0;
+              setVolume(value);
+              setMuted(value === 0);
+            }}
+          />
+          <button
+            className="feed-live"
+            aria-label={`Return ${camera.name} to live`}
+            onClick={async () => {
+              const media = video.current;
+              const target = liveEngine.current?.liveSyncPosition;
+              if (Number.isFinite(target)) media.currentTime = target;
+              else if (media.seekable.length)
+                media.currentTime = Math.max(
+                  media.seekable.start(media.seekable.length - 1),
+                  media.seekable.end(media.seekable.length - 1) - 2,
+                );
+              try {
+                await media.play();
+              } catch {
+                setExpandError("Playback could not resume. Try again.");
+              }
+            }}
+          >
+            <SkipForward size={14} />
+            Live
           </button>
         </div>
       )}

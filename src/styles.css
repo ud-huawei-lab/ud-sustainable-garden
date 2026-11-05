@@ -3062,3 +3062,58 @@ input {
     display: none;
   }
 }
+
+.feed-controls {
+  position: absolute;
+  bottom: 56px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: #0009;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.camera-feed:hover .feed-controls,
+.camera-feed:focus-within .feed-controls {
+  opacity: 1;
+}
+.feed-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  min-height: 36px;
+  color: inherit;
+  border-radius: 5px;
+}
+.feed-controls button:hover {
+  background: #ffffff20;
+}
+.feed-controls input {
+  width: 68px;
+  accent-color: #ddd;
+  cursor: pointer;
+}
+.feed-controls .feed-live {
+  padding: 0 9px;
+  font-size: 11px;
+}
+@media (hover: none), (pointer: coarse) {
+  .feed-controls {
+    opacity: 1;
+  }
+  .feed-controls button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-controls {
+    transition: none;
+  }
+}
