@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Add the original dashboard's branded sign-in experience using the existing account, salted scrypt password hashes, and opaque server-side sessions.
-- Protect all data, history, live-event, and camera endpoints; add 12-hour expiry, logout revocation, origin checks, login rate limits, and HTTPS enforcement for remote access.
+- Protect all data, history, live-event, and camera endpoints with origin checks, login limits, and HTTPS enforcement. Vercel uses 30-minute cookies; local hosting retains 12-hour revocable sessions.
 - Host the frontend and Node API together on Vercel with no Redis or storage subscription. Use 30-minute encrypted session cookies and encrypted camera routing context across function instances. Logout clears the browser cookie; copied cookies expire naturally. Local hosting retains in-memory session revocation.
 - Add one-second HTTP readings when the live stream is interrupted or buffered, and surface request failures.
 - Add authentication, HTTPS proxy, deployment-route, and transport regression checks, plus a CI workflow.
