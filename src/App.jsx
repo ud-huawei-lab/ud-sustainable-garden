@@ -5,9 +5,6 @@ import {
   LayoutGrid,
   Cctv,
   Box,
-  SlidersHorizontal,
-  Mic,
-  AudioLines,
   X,
   Columns3,
   LogOut,
@@ -18,6 +15,7 @@ import History from "./History.jsx";
 import Cameras from "./Cameras.jsx";
 import ReadingPage from "./Sensors.jsx";
 import Skeleton from "./Skeleton.jsx";
+import Assistant from "./Assistant.jsx";
 const Home = lazy(() => import("./Home.jsx"));
 const pages = {
   home: "Digital garden",
@@ -173,10 +171,12 @@ export default function App({ onSignOut, signingOut }) {
           )
         )}
         {page === "cameras" && <Cameras />}
-        <footer className="page-footer">
-          <span>University of Dubai · Sustainable Garden</span>
-          <span>All times in Dubai · UTC+4</span>
-        </footer>
+        {page !== "home" && (
+          <footer className="page-footer">
+            <span>University of Dubai · Sustainable Garden</span>
+            <span>All times in Dubai · UTC+4</span>
+          </footer>
+        )}
       </main>
       <dialog
         ref={dialog}
@@ -202,23 +202,7 @@ export default function App({ onSignOut, signingOut }) {
           />
         )}
       </dialog>
-      <div className="ask-container">
-        <div className="ask-bar" aria-label="Garden assistant preview">
-          <SlidersHorizontal size={17} strokeWidth={1.4} />
-          <input
-            aria-label="Ask the garden — preview only"
-            placeholder="Ask the garden"
-            disabled
-          />
-          <span className="ai-caption">AI preview</span>
-          <button disabled aria-label="Voice input — available later">
-            <Mic size={17} />
-          </button>
-          <button disabled aria-label="Voice conversation — available later">
-            <AudioLines size={20} />
-          </button>
-        </div>
-      </div>
+      <Assistant />
     </>
   );
 }
