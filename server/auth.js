@@ -1,6 +1,7 @@
 import express from "express";
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { memoryStore } from "./store.js";
 
 const derive = promisify(scrypt);
 const digest = (value) => createHash("sha256").update(value).digest();
@@ -22,7 +23,12 @@ export async function hashPassword(password) {
 // One configured account, opaque server-side sessions, and no browser-readable tokens.
 export function createAuth(
   { username, passwordHash, origins = [], secure = true } = {},
-  { now = Date.now, sessionMs = 12 * 3600000, maxAttempts = 8 } = {},
+  {
+    now = Date.now,
+    sessionMs = 12 * 3600000,
+    maxAttempts = 8,
+    store = memoryStore({ now }),
+  } = {},
 ) {
   if (!username || typeof username !== "string" || username.length > 128)
     throw new Error("Configure APP_USERNAME before starting the dashboard.");
@@ -32,6 +38,9 @@ export function createAuth(
       "Configure a valid APP_PASSWORD_HASH with npm run auth:setup.",
     );
   const usernameDigest = digest(username);
+  const credentialVersion = digest(username + ":" + passwordHash).toString(
+    "hex",
+  );
   const expectedKey = Buffer.from(encoded[2], "hex");
   const allowedOrigins = new Set(origins);
   const cookieName = secure ? "__Host-ud_garden" : "ud_garden_session";
@@ -41,8 +50,7 @@ export function createAuth(
     sameSite: "strict",
     path: "/",
   };
-  const sessions = new Map();
-  const attempts = new Map();
+  const sessions = new Map(); // Local timers/listeners only; credentials live in the store.
   const windowMs = 15 * 60000;
   let verifying = 0;
   const router = express.Router();
@@ -55,7 +63,8 @@ export function createAuth(
     const token = cookies[0].slice(cookieName.length + 1);
     return /^[\w-]{43}$/.test(token) ? digest(token).toString("hex") : null;
   };
-  const revoke = (key) => {
+  const revoke = async (key) => {
+    await store.delete("session:" + key);
     const session = sessions.get(key);
     if (!session) return;
     sessions.delete(key);
@@ -63,11 +72,21 @@ export function createAuth(
     for (const callback of session.listeners) callback();
     session.listeners.clear();
   };
-  const readSession = (req) => {
+  const readSession = async (req) => {
     const key = tokenFrom(req);
-    const session = sessions.get(key);
+    const session = key ? await store.get("session:" + key) : null;
+    if (!session && sessions.has(key)) await revoke(key);
+    if (
+      session &&
+      (session.user !== username ||
+        session.version !== credentialVersion ||
+        !Number.isFinite(session.expiresAt))
+    ) {
+      await revoke(key);
+      return null;
+    }
     if (session && session.expiresAt <= now()) {
-      revoke(key);
+      await revoke(key);
       return null;
     }
     return session || null;
@@ -101,27 +120,17 @@ export function createAuth(
           .status(400)
           .json({ error: "Enter a username and password." });
       const address = req.ip || req.socket.remoteAddress;
-      for (const [key, bucket] of attempts)
-        if (bucket.until <= now()) attempts.delete(key);
-      const bucket = attempts.get(address) || {
-        count: 0,
-        until: now() + windowMs,
-      };
-      if (
-        bucket.count >= maxAttempts ||
-        (!attempts.has(address) && attempts.size >= 10000)
-      )
+      const bucket = await store.attempt(
+        "attempt:" + digest(address).toString("hex"),
+        windowMs,
+      );
+      if (bucket.count > maxAttempts)
         return res
-          .set(
-            "Retry-After",
-            String(Math.max(1, Math.ceil((bucket.until - now()) / 1000))),
-          )
+          .set("Retry-After", String(Math.max(1, Math.ceil(bucket.ttl / 1000))))
           .status(429)
           .json({
             error: "Too many sign-in attempts. Try again in 15 minutes.",
           });
-      bucket.count++;
-      attempts.set(address, bucket);
       if (verifying >= 2)
         return res
           .set("Retry-After", "2")
@@ -141,34 +150,38 @@ export function createAuth(
             .status(401)
             .json({ error: "Username or password is incorrect." });
         const old = tokenFrom(req);
-        if (old) revoke(old);
-        if (sessions.size >= 100) revoke(sessions.keys().next().value);
+        if (old) await revoke(old);
+        if (sessions.size >= 100) await revoke(sessions.keys().next().value);
         const token = randomBytes(32).toString("base64url");
         const tokenKey = digest(token).toString("hex");
-        const session = {
+        const value = {
           user: username,
           expiresAt: now() + sessionMs,
-          listeners: new Set(),
+          version: credentialVersion,
         };
-        session.timer = setTimeout(() => revoke(tokenKey), sessionMs).unref();
+        await store.set("session:" + tokenKey, value, sessionMs);
+        const session = { listeners: new Set() };
+        session.timer = setTimeout(() => {
+          revoke(tokenKey).catch(() => {});
+        }, sessionMs).unref();
         sessions.set(tokenKey, session);
         res
           .cookie(cookieName, token, cookieOptions)
-          .json({ user: username, expiresAt: session.expiresAt });
+          .json({ user: username, expiresAt: value.expiresAt });
       } finally {
         verifying--;
       }
     },
   );
-  router.get("/session", (req, res) => {
-    const session = readSession(req);
+  router.get("/session", async (req, res) => {
+    const session = await readSession(req);
     if (!session)
       return res.status(401).json({ error: "Sign in to view the garden." });
     res.json({ user: session.user, expiresAt: session.expiresAt });
   });
-  router.post("/logout", (req, res) => {
+  router.post("/logout", async (req, res) => {
     const key = tokenFrom(req);
-    if (key) revoke(key);
+    if (key) await revoke(key);
     res.clearCookie(cookieName, cookieOptions).status(204).end();
   });
   router.use((req, res) =>
@@ -190,22 +203,24 @@ export function createAuth(
   });
   return {
     router,
-    requireSession(req, res, next) {
+    async requireSession(req, res, next) {
       if (crossSite(req))
         return res.status(403).json({ error: "This request is not allowed." });
-      const session = readSession(req);
+      const session = await readSession(req);
       if (!session)
         return res.status(401).json({ error: "Sign in to view the garden." });
       req.gardenSession = session;
+      req.gardenSessionKey = tokenFrom(req);
       next();
     },
     onSessionEnd(req, callback) {
-      const session = req.gardenSession;
+      const session = sessions.get(req.gardenSessionKey);
+      if (!session) return () => {};
       session.listeners.add(callback);
       return () => session.listeners.delete(callback);
     },
-    close() {
-      for (const key of sessions.keys()) revoke(key);
+    async close() {
+      for (const key of sessions.keys()) await revoke(key);
     },
   };
 }

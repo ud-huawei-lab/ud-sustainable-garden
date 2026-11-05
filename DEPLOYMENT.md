@@ -1,49 +1,42 @@
-# Hosted Garden deployment
+# Deploy on Vercel
 
-The Vercel site initially deployed only `dist/`. Its `/api/readings` and `/auth/session` routes returned 404, so no readings could appear. The Nabu Casa server itself was reachable and returned real sensor data.
+The React frontend and Node API run in the same Vercel project and use the same domain. `api/garden.js` hosts the API; `vercel.json` routes `/auth/*` and `/api/*` to it. There is no external backend URL to configure. Builds succeed without runtime secrets; unconfigured API requests fail closed with 503.
 
-The project needs a persistent Node web service for its server-side sessions, shared Home Assistant WebSocket connection, and camera proxy. Vercel continues to serve the frontend and proxies `/api/*` and `/auth/*` to that service. No Home Assistant secrets belong in Vite variables or the frontend bundle.
+## Project settings
 
-## 1. Deploy the backend
+- Repository: `ud-huawei-lab/ud-sustainable-garden`, production branch `main`.
+- Framework: Vite. Build: `npm run build`. Output: `dist`.
+- Node: 24.x. Fluid compute is enabled in `vercel.json`.
 
-Use the repository's `render.yaml` Blueprint to create **one** Node web service. It starts with the free plan; do not change to a paid plan without authorization. The free service can sleep and cold-start, and restarting it signs users out. Always-on production hosting can be chosen later.
+## Server environment variables
 
-The Blueprint configures:
+Add these in the Vercel project's Environment Variables for Production and, when needed, Preview:
 
-- Build: `npm ci --ignore-scripts && npm run build`
-- Start: `npm start`
-- Health check: `/healthz`
-- `HOST=0.0.0.0`, with Render's assigned `PORT`
-- `APP_ORIGIN=https://ud-sustainable-garden.vercel.app`
-- `TRUST_PROXY=1`, relying on Render's trusted edge proxy; the Node port must not be directly exposed.
 - `HA_URL=https://jnjtt9at8pwjtctcunrwlvs2mdegtpbf.ui.nabu.casa`
+- `HA_USERNAME` and `HA_PASSWORD`, using the supplied HA account; alternatively, use `HA_TOKEN`.
+- `APP_USERNAME` and `APP_PASSWORD_HASH`, using the configured Garden account. The local ignored `.env` already contains the hash. `npm run auth:setup` creates or changes it with hidden password input.
+- `APP_ORIGIN=https://ud-sustainable-garden.vercel.app`. Vercel's system deployment URL is also allowed for previews.
 
-Set these secret environment variables in the backend hosting dashboard:
+Keep credentials and the password hash marked sensitive/encrypted. Never give them a `VITE_` prefix, commit `.env`, or put them in browser code. The Garden viewer account and the Home Assistant source account serve different purposes.
 
-- `HA_USERNAME` and `HA_PASSWORD`, using the supplied Home Assistant account; alternatively, a long-lived `HA_TOKEN` can replace them.
-- `APP_USERNAME` and `APP_PASSWORD_HASH`, using the configured dashboard account. The local ignored `.env` already holds the hash. For another account, run `npm run auth:setup` in a terminal and use its resulting hash.
+## Shared sessions through Vercel Storage
 
-Never commit `.env`, paste credentials into repository files, or add `VITE_` prefixes to secrets. The two logins are separate: the Garden login authorizes viewers; the HA account lets the backend read the source data.
+In the same project's **Storage** tab, connect an **Upstash Redis** store through Vercel Marketplace. Choose a free option if available; a paid plan requires approval. Connect it to the required deployment environments. The integration supplies `KV_REST_API_URL` and `KV_REST_API_TOKEN`; `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are also supported.
 
-## 2. Connect Vercel to the backend
+Redis stores hashed session identifiers with 12-hour expiry, atomic login-attempt counters, and temporary camera stream metadata. Passwords and Home Assistant account credentials are not stored in Redis. Camera stream metadata contains upstream stream URLs and is private server data with a one-hour TTL. No browser-readable session tokens or upstream camera URLs are returned to clients.
 
-Copy the actual HTTPS origin assigned to the backend service. In the Vercel project's production environment, set `GARDEN_BACKEND_ORIGIN` to that origin, **without a trailing slash**. Do not substitute an unverified or guessed hostname.
+Shared storage makes login, logout, and camera playback work when consecutive requests reach different Vercel instances. Sessions survive cold starts; changing the configured password hash invalidates old sessions. If Redis is unavailable, protected requests fail rather than bypassing authentication.
 
-Redeploy the frontend. `vercel.ts` generates the two proxy rules and no-store headers. It refuses to deploy if the backend origin is absent or malformed. The browser keeps using `https://ud-sustainable-garden.vercel.app` for login, readings, and cameras, so cookies stay same-origin. The backend checks that same public origin and uses Secure, HttpOnly, SameSite=Strict cookies.
+Local `npm start` continues using one process and in-memory storage; no Redis is required locally. Local sessions end on restart.
 
-The frontend uses SSE and falls back to one-second HTTP readings if a proxy buffers or interrupts the stream. Actual measurement freshness still depends on each sensor's reporting interval.
+## Live measurements and cameras
 
-## 3. Verify before calling the deployment complete
+Vercel uses one-second authenticated HTTP readings rather than an indefinitely open server connection. Values come directly from HA through the Node function and retain each sensor's actual reporting interval. Local development continues to use SSE.
 
-- The backend `/healthz` responds 200, with no secrets in the response.
-- Vercel `/auth/session` responds 401 while signed out, rather than 404.
-- Login succeeds with the configured Garden account, and its cookie has Secure, HttpOnly, and SameSite=Strict.
-- Vercel `/api/readings` responds 200 after login and contains the mapped HA entities.
-- Reading displays real values, history loads, and both camera feeds play.
-- Logout revokes the session, closes its live connection, and returns protected endpoints to 401.
+Camera stream metadata is shared so playlists and video segments can reach different instances safely. HLS resources remain same-origin and authenticated. Individual function requests have a 120-second duration limit to allow HA camera startup and long-polling playlist requests; cold starts and the upstream network can still delay playback.
 
-Only one backend instance is supported by the in-memory session and login-limit stores. Multiple instances need shared stores first. A static Vercel-only deployment cannot run this persistent backend. Hosting access and environment configuration are required to complete deployment.
+## Verify
 
-## Rollback
+Redeploy the latest `main` after saving environment variables and connecting storage. `/auth/session` should return 401 when signed out, rather than 404 or 503. Sign in and confirm `/api/readings` returns the mapped entities, Reading displays values, history loads, and both camera feeds play. Logout must return protected endpoints to 401, including requests handled by another instance.
 
-Revert the deployment commit and redeploy the previous frontend/backend revision together. Keep secrets in the hosting environment. Backend restarts intentionally invalidate existing sessions; users sign in again.
+Successful build/deployment does not prove that runtime credentials or storage are configured. Live-site verification remains required. Reverting the deployment restores the preceding version; leave secrets in Vercel's environment settings.

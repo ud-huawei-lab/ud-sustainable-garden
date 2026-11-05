@@ -3,21 +3,101 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import express from "express";
 import { createAuth, hashPassword } from "./auth.js";
+import { memoryStore } from "./store.js";
 
 const password = "test-account-password-only";
 const passwordHash = await hashPassword(password);
 
+test("sessions and logout work across different function instances", async (t) => {
+  const store = memoryStore();
+  const first = await setup(t, { store });
+  const second = await setup(t, { store });
+  const login = await first.post("/auth/login", {
+    username: "garden-test",
+    password,
+  });
+  const cookie = login.headers.get("set-cookie").split(";")[0];
+  assert.equal(
+    (await fetch(second.base + "/api/private", { headers: { Cookie: cookie } }))
+      .status,
+    200,
+  );
+  await second.post("/auth/logout", {}, { Cookie: cookie });
+  assert.equal(
+    (await fetch(first.base + "/api/private", { headers: { Cookie: cookie } }))
+      .status,
+    401,
+  );
+});
+
+test("changing the password hash revokes existing shared sessions", async (t) => {
+  const store = memoryStore();
+  const old = await setup(t, { store });
+  const login = await old.post("/auth/login", {
+    username: "garden-test",
+    password,
+  });
+  const cookie = login.headers.get("set-cookie").split(";")[0];
+  const current = await setup(t, {
+    store,
+    credentialHash: await hashPassword("replacement-password-only"),
+  });
+  assert.equal(
+    (
+      await fetch(current.base + "/api/private", {
+        headers: { Cookie: cookie },
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (await fetch(old.base + "/api/private", { headers: { Cookie: cookie } }))
+      .status,
+    401,
+  );
+});
+
+test("login limits are shared across function instances", async (t) => {
+  const store = memoryStore();
+  const first = await setup(t, { store, maxAttempts: 2 });
+  const second = await setup(t, { store, maxAttempts: 2 });
+  assert.equal(
+    (
+      await first.post("/auth/login", {
+        username: "garden-test",
+        password: "wrong",
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (
+      await second.post("/auth/login", {
+        username: "garden-test",
+        password: "wrong",
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (await first.post("/auth/login", { username: "garden-test", password }))
+      .status,
+    429,
+  );
+});
+
 async function setup(t, options = {}) {
+  const { credentialHash = passwordHash, ...authOptions } = options;
   let now = Date.now();
   const app = express();
   const auth = createAuth(
     {
       username: "garden-test",
-      passwordHash,
+      passwordHash: credentialHash,
       origins: ["https://garden.example"],
       secure: true,
     },
-    { now: () => now, ...options },
+    { now: () => now, ...authOptions },
   );
   app.use("/auth", auth.router);
   app.use("/api", auth.requireSession);
