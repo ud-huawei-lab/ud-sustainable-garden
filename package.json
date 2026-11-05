@@ -11,7 +11,7 @@
     "build": "vite build",
     "start": "node --env-file-if-exists=.env server/index.js --production",
     "test": "node --test server/*.test.js",
-    "check": "node --check server/index.js && node --check server/ha.js && node --check server/auth.js",
+    "check": "node --check server/index.js && node --check server/app.js && node --check server/ha.js && node --check server/auth.js && node --check server/store.js && node --check api/garden.js",
     "auth:setup": "node scripts/configure-auth.mjs"
   },
   "dependencies": {

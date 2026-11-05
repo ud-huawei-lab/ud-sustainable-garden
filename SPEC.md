@@ -1,6 +1,6 @@
 # UD Sustainable Garden
 
-React + JSX dashboard with a Node backend and a Three.js digital garden. Local-first delivery; no hosting or public deployment.
+React + JSX dashboard with a Node backend and a Three.js digital garden. Support local hosting and a single Vercel project for the frontend and API. Shared sessions, login limits, and temporary camera metadata use Redis connected through Vercel Storage. No separate application hosting service is required.
 
 Authentication: match the original dashboard's branded username/password sign-in. Require a configured account even on localhost, store only a salted password hash, and protect all sensor/history/camera endpoints with server-side sessions. HttpOnly, SameSite=Strict cookies, Secure over HTTPS; 12-hour absolute expiry, immediate logout revocation, cross-tab logout, origin checks, login rate limits, and no browser-readable tokens. Remote access requires a configured HTTPS origin; no public deployment is included.
 
@@ -10,7 +10,7 @@ Independent hash routes: Home (#/home), Overview (#/overview), Reading (#/readin
 
 Final sketch corrections: separate rear ground-mounted solar array to the extractors' left; tank behind the two pots; full-length parking canopy in front. Numbers 1–10 identify parking spaces, not solar panels. Camera 1 attaches to an extractor and Camera 2 to the canopy near its middle. Tubing routes are extractor → tank → plants, with illustrative flow animation. Pure white/black page and scene backgrounds, no Home frame, collapsible readings, neutral cards, color only for measurement scales. Group all station sensors under Temperature, Humidity, Wind, Pressure, Solar & UV, Rainfall, and Air Quality.
 
-Live data: one shared HA WebSocket state-change subscription, relayed to browser clients with SSE; coalesce bursts over 250 ms, reconnect automatically. Device reporting intervals remain the limit on new measurements. CCTV autoplays both muted LL-HLS feeds; handle nested video segments without exposing upstream credentials. History has a tile for every mapped sensor, with a centered chart modal; text sensors use a recorded-change table.
+Live data: local hosting uses one shared HA WebSocket subscription relayed with SSE, coalescing bursts over 250 ms. Vercel uses authenticated one-second HTTP readings. Device reporting intervals remain the limit on new measurements. CCTV autoplays both muted LL-HLS feeds; camera metadata must work across function instances and nested video segments must never expose upstream credentials. History has a tile for every mapped sensor, with a centered chart modal; text sensors use a recorded-change table.
 
 Match the user's UD digital-twin weather reference: university branding, understated navigation, two wide top panels, three lower panels, large light-weight readings, subtle surfaces, light/dark theme, and a bottom ask bar. Extend the same language with history and two garden cameras. No status indicators, dots, connection badges, or fabricated readings. AI is display-only and makes no network requests.
 
