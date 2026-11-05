@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import App from "./App.jsx";
+import Skeleton from "./Skeleton.jsx";
 
 function Login({ onSignIn, connectionError }) {
   const [username, setUsername] = useState("");
@@ -209,7 +210,7 @@ export default function Auth() {
     return (
       <main className="login-page">
         <p className="secondary" role="status">
-          Opening the garden…
+          <Skeleton kind="session" label="Opening dashboard" />
         </p>
       </main>
     );

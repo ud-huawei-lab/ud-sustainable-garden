@@ -17,6 +17,7 @@ import { Headline, Solar, WindPanel, RainPanel, AirPanel } from "./Weather.jsx";
 import History from "./History.jsx";
 import Cameras from "./Cameras.jsx";
 import ReadingPage from "./Sensors.jsx";
+import Skeleton from "./Skeleton.jsx";
 const Home = lazy(() => import("./Home.jsx"));
 const pages = {
   home: "Digital garden",
@@ -128,10 +129,6 @@ export default function App({ onSignOut, signingOut }) {
             Sustainable Garden{" "}
             <span className="page-name">/ {pages[page]}</span>
           </h1>
-          <p>
-            College of Engineering & IT <span> / </span> Environmental
-            monitoring
-          </p>
         </div>
         {data.error && (
           <div className="error-message">
@@ -143,9 +140,7 @@ export default function App({ onSignOut, signingOut }) {
         )}
         {page === "home" && (
           <Suspense
-            fallback={
-              <div className="chart-empty">Preparing the 3D garden…</div>
-            }
+            fallback={<Skeleton kind="scene" label="Loading garden view" />}
           >
             <Home
               entities={data.entities}
@@ -155,19 +150,27 @@ export default function App({ onSignOut, signingOut }) {
             />
           </Suspense>
         )}
-        {page === "overview" && (
-          <>
-            <div className="weather-grid">
-              <Headline entities={data.entities} onHistory={showHistory} />
-              <Solar entities={data.entities} onHistory={showHistory} />
-              <WindPanel entities={data.entities} onHistory={showHistory} />
-              <RainPanel entities={data.entities} onHistory={showHistory} />
-              <AirPanel entities={data.entities} onHistory={showHistory} />
-            </div>
-          </>
+        {page === "overview" && !data.fetchedAt && !data.error ? (
+          <Skeleton kind="overview" />
+        ) : (
+          page === "overview" && (
+            <>
+              <div className="weather-grid">
+                <Headline entities={data.entities} onHistory={showHistory} />
+                <Solar entities={data.entities} onHistory={showHistory} />
+                <WindPanel entities={data.entities} onHistory={showHistory} />
+                <RainPanel entities={data.entities} onHistory={showHistory} />
+                <AirPanel entities={data.entities} onHistory={showHistory} />
+              </div>
+            </>
+          )
         )}
-        {page === "readings" && (
-          <ReadingPage entities={data.entities} onSelect={showHistory} />
+        {page === "readings" && !data.fetchedAt && !data.error ? (
+          <Skeleton />
+        ) : (
+          page === "readings" && (
+            <ReadingPage entities={data.entities} onSelect={showHistory} />
+          )
         )}
         {page === "cameras" && <Cameras />}
         <footer className="page-footer">
