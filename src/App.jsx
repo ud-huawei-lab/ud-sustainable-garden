@@ -10,6 +10,7 @@ import {
   AudioLines,
   X,
   Gauge,
+  Columns3,
 } from "lucide-react";
 import { useReadings } from "./data.js";
 import { Headline, Solar, WindPanel, RainPanel, AirPanel } from "./Weather.jsx";
@@ -21,6 +22,7 @@ const pages = {
   home: "Digital garden",
   overview: "Current readings",
   readings: "Reading & history",
+  columnar: "Columnar reading",
   cameras: "Garden CCTV",
 };
 const currentPage = () => {
@@ -89,6 +91,7 @@ export default function App() {
             ["home", "Home", Box],
             ["overview", "Overview", LayoutGrid],
             ["readings", "Reading", Gauge],
+            ["columnar", "Columnar", Columns3],
             ["cameras", "CCTV", Cctv],
           ].map(([id, label, Icon]) => (
             <a
@@ -156,6 +159,13 @@ export default function App() {
         )}
         {page === "readings" && (
           <ReadingPage entities={data.entities} onSelect={showHistory} />
+        )}
+        {page === "columnar" && (
+          <ReadingPage
+            entities={data.entities}
+            onSelect={showHistory}
+            layout="columnar"
+          />
         )}
         {page === "cameras" && <Cameras />}
         <footer className="page-footer">

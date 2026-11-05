@@ -10,6 +10,7 @@ const localInput = (value) =>
 
 function Chart({ data, metric }) {
   const [hover, setHover] = useState(null);
+  const [pointer, setPointer] = useState(null);
   const container = useRef(null);
   const [width, setWidth] = useState(1120);
   useEffect(() => {
@@ -80,6 +81,11 @@ function Chart({ data, metric }) {
         aria-label={`${metric.label} history from ${time(data.start, { day: "numeric", month: "short" })} to ${time(data.end, { day: "numeric", month: "short" })}`}
         onPointerMove={(event) => {
           const box = event.currentTarget.getBoundingClientRect();
+          const chartBox = container.current.getBoundingClientRect();
+          setPointer({
+            x: event.clientX - chartBox.left,
+            y: event.clientY - chartBox.top,
+          });
           setHover(
             Math.max(
               0,
@@ -91,7 +97,10 @@ function Chart({ data, metric }) {
             ),
           );
         }}
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={() => {
+          setHover(null);
+          setPointer(null);
+        }}
       >
         {Array.from({ length: 5 }, (_, i) => {
           const value = min + ((max - min) * i) / 4;
@@ -185,6 +194,30 @@ function Chart({ data, metric }) {
           />
         )}
       </svg>
+      {pointer && hoverTime != null && (
+        <div
+          className="chart-tooltip"
+          aria-hidden="true"
+          style={{
+            left: Math.max(
+              8,
+              Math.min(pointer.x + 14, width - Math.min(260, width - 16) - 8),
+            ),
+            top: pointer.y > 130 ? pointer.y - 14 : pointer.y + 18,
+            transform: pointer.y > 130 ? "translateY(-100%)" : undefined,
+          }}
+        >
+          <span>{time(hoverTime, { day: "numeric", month: "short" })}</span>
+          {sample.map((s) => (
+            <div key={s.name}>
+              <span>{s.name}</span>
+              <strong>
+                {format(s.point?.value)} {metric.unit}
+              </strong>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="chart-detail" aria-live="polite">
         {hoverTime == null ? (
           <span>
@@ -207,7 +240,10 @@ function Chart({ data, metric }) {
         min="0"
         max="1000"
         value={hover == null ? 0 : Math.round(hover * 1000)}
-        onChange={(e) => setHover(Number(e.target.value) / 1000)}
+        onChange={(e) => {
+          setPointer(null);
+          setHover(Number(e.target.value) / 1000);
+        }}
         aria-label="Explore historical readings"
       />
     </div>

@@ -638,7 +638,37 @@ main {
   height: 2px;
 }
 .chart-wrap {
+  position: relative;
   margin-top: 14px;
+}
+.chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  width: 260px;
+  max-width: calc(100% - 16px);
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 22%);
+  pointer-events: none;
+  font-size: 12px;
+}
+.chart-tooltip > span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.chart-tooltip > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 5px;
+}
+.chart-tooltip strong {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .chart-wrap svg {
   display: block;
@@ -2524,5 +2554,114 @@ input {
   }
   nav {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* Alternate columnar view; the original Reading composition remains available. */
+.reading-columnar .reading-mosaic {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+  align-items: start;
+}
+.reading-column {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  min-width: 0;
+}
+.reading-column .reading-group {
+  margin: 0;
+}
+.reading-column .reading-group-tiles {
+  height: auto;
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto;
+}
+.reading-column .sensor-tile {
+  min-height: 140px;
+}
+.reading-column .sensor-featured {
+  grid-column: span 2;
+  grid-row: span 1;
+  min-height: 210px;
+}
+.reading-column .reading-group-temperature .sensor-featured .sensor-value {
+  font-size: 62px;
+  margin-top: 22px;
+}
+.reading-column
+  .reading-group-temperature
+  .tile-ambient_weather_inside_temperature {
+  grid-column: span 2;
+  min-height: 130px;
+}
+.reading-column .reading-group-humidity .sensor-tile {
+  min-height: 190px;
+}
+.reading-column .reading-group-humidity .sensor-value {
+  font-size: 38px;
+  margin-top: 25px;
+}
+.reading-column .reading-group-wind .sensor-featured {
+  min-height: 220px;
+}
+.reading-column .reading-group-wind .sensor-featured .sensor-value {
+  font-size: 47px;
+}
+.reading-column .reading-group-pressure .sensor-featured {
+  min-height: 180px;
+}
+.reading-column .reading-group-pressure .sensor-featured .sensor-value {
+  font-size: 42px;
+  margin-top: 17px;
+}
+.reading-column .reading-group-solar .sensor-tile:not(.sensor-featured) {
+  min-height: 175px;
+}
+.reading-column
+  .reading-group-solar
+  .sensor-tile:not(.sensor-featured)
+  .sensor-value {
+  font-size: 33px;
+}
+.reading-column .reading-group-air .sensor-featured {
+  min-height: 185px;
+}
+.reading-column .reading-group-air .sensor-tile:not(.sensor-featured) {
+  min-height: 137px;
+}
+.reading-column .reading-group-rain .sensor-featured .sensor-value {
+  margin-top: 20px;
+}
+@media (min-width: 701px) and (max-width: 1100px) {
+  .reading-columnar .reading-mosaic {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+  }
+  .reading-column:last-child {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+@media (max-width: 700px) {
+  .reading-columnar .reading-mosaic {
+    display: block;
+  }
+  .reading-column {
+    gap: 26px;
+    margin-bottom: 26px;
+  }
+  .reading-column:last-child {
+    display: flex;
+  }
+  .reading-column .sensor-featured {
+    min-height: 215px;
+  }
+}
+@media (max-width: 850px) {
+  nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }

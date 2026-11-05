@@ -160,9 +160,41 @@ function SensorTile({ sensor, entities, onSelect, featured }) {
     </button>
   );
 }
-export default function ReadingPage({ entities, onSelect }) {
+export default function ReadingPage({ entities, onSelect, layout = "mosaic" }) {
+  const renderGroup = (group) => {
+    const sensors = sensorReadings.filter((sensor) =>
+      group.types.includes(sensor.group),
+    );
+    if (group.key === "solar")
+      sensors.sort(
+        (a, b) => Number(b.key === group.lead) - Number(a.key === group.lead),
+      );
+    return (
+      <section
+        key={group.key}
+        className={`reading-group reading-group-${group.key}`}
+        aria-labelledby={`reading-${group.key}`}
+      >
+        <h3 id={`reading-${group.key}`}>{group.label}</h3>
+        <div className="reading-group-tiles">
+          {sensors.map((sensor) => (
+            <SensorTile
+              key={sensor.key}
+              sensor={sensor}
+              entities={entities}
+              onSelect={onSelect}
+              featured={sensor.key === group.lead}
+            />
+          ))}
+        </div>
+      </section>
+    );
+  };
   return (
-    <section className="reading-page" aria-labelledby="reading-heading">
+    <section
+      className={`reading-page ${layout === "columnar" ? "reading-columnar" : ""}`}
+      aria-labelledby="reading-heading"
+    >
       <div className="reading-intro">
         <div>
           <h2 id="reading-heading">The garden, in detail.</h2>
@@ -174,36 +206,19 @@ export default function ReadingPage({ entities, onSelect }) {
         <span>23 sensors · 7 categories</span>
       </div>
       <div className="reading-mosaic">
-        {groups.map((group) => {
-          const sensors = sensorReadings.filter((sensor) =>
-            group.types.includes(sensor.group),
-          );
-          if (group.key === "solar")
-            sensors.sort(
-              (a, b) =>
-                Number(b.key === group.lead) - Number(a.key === group.lead),
-            );
-          return (
-            <section
-              key={group.key}
-              className={`reading-group reading-group-${group.key}`}
-              aria-labelledby={`reading-${group.key}`}
-            >
-              <h3 id={`reading-${group.key}`}>{group.label}</h3>
-              <div className="reading-group-tiles">
-                {sensors.map((sensor) => (
-                  <SensorTile
-                    key={sensor.key}
-                    sensor={sensor}
-                    entities={entities}
-                    onSelect={onSelect}
-                    featured={sensor.key === group.lead}
-                  />
-                ))}
+        {layout === "columnar"
+          ? [
+              ["temperature", "solar"],
+              ["wind", "humidity", "pressure"],
+              ["air", "rain"],
+            ].map((keys, index) => (
+              <div className="reading-column" key={index}>
+                {keys.map((key) =>
+                  renderGroup(groups.find((group) => group.key === key)),
+                )}
               </div>
-            </section>
-          );
-        })}
+            ))
+          : groups.map(renderGroup)}
       </div>
     </section>
   );
