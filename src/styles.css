@@ -2969,19 +2969,41 @@ input {
 
 /* Experimental sustainability tint belongs to the page, not its cards. */
 :root {
-  --page-background: #f7faf8;
+  --page-background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      rgba(80, 145, 97, 0.09),
+      transparent 55%
+    ),
+    #fff;
   background: var(--page-background);
+  background-attachment: fixed;
 }
 :root body {
   background: var(--page-background);
+  background-attachment: fixed;
   min-height: 100svh;
 }
 :root[data-theme="dark"] {
-  --page-background: #030705;
+  --page-background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      rgba(55, 117, 73, 0.17),
+      transparent 55%
+    ),
+    #000;
   background: var(--page-background);
 }
 :root[data-theme="dark"] body {
   background: var(--page-background);
+  background-attachment: fixed;
+}
+.topbar {
+  background: var(--page-background);
+  background-attachment: fixed;
+}
+.twin-stage {
+  background: transparent;
 }
 .scene-view-options {
   position: absolute;

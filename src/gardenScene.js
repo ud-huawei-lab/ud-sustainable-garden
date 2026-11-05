@@ -10,9 +10,10 @@ export function createGardenScene(
 ) {
   const plan = view === "2d";
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(dark ? "#030705" : "#f7faf8");
-  scene.fog = new THREE.Fog(scene.background, 36, 72);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  // Let the page's green glow continue behind the model without a rectangular canvas background.
+  scene.fog = new THREE.Fog(dark ? "#000000" : "#ffffff", 36, 72);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
