@@ -78,7 +78,46 @@ test("Vercel serves login, real readings and camera resources across isolated in
     }),
   });
   assert.equal(login.status, 200);
+  const sessionCookie = login.headers.get("set-cookie");
+  for (const flag of [
+    "HttpOnly",
+    "Secure",
+    "SameSite=None",
+    "Partitioned",
+    "Path=/",
+  ])
+    assert.ok(sessionCookie.includes(flag));
+  assert.equal(login.headers.get("x-frame-options"), null);
+  assert.ok(
+    !login.headers.get("content-security-policy").includes("frame-ancestors"),
+  );
   const cookie = login.headers.get("set-cookie").split(";")[0];
+  // Embedding does not grant the parent website API access.
+  assert.equal(
+    (
+      await request(second, "api/readings", {
+        headers: {
+          Cookie: cookie,
+          Origin: "https://other-dashboard.example",
+          "Sec-Fetch-Site": "cross-site",
+        },
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(second, "auth/login", {
+        method: "POST",
+        headers: { Origin: "https://other-dashboard.example" },
+        body: JSON.stringify({
+          username: "garden-test",
+          password: "vercel-test-password-only",
+        }),
+      })
+    ).status,
+    403,
+  );
   const reading = await request(second, "api/readings", {
     headers: { Cookie: cookie },
   });
@@ -119,6 +158,8 @@ test("Vercel serves login, real readings and camera resources across isolated in
     headers: { Cookie: cookie },
   });
   assert.match(logout.headers.get("set-cookie"), /Expires=Thu, 01 Jan 1970/);
+  assert.match(logout.headers.get("set-cookie"), /SameSite=None/);
+  assert.match(logout.headers.get("set-cookie"), /Partitioned/);
   assert.equal((await request(first, "api/readings")).status, 401);
   // Stateless logout clears the browser cookie; a copied token lasts until expiry.
   assert.equal(

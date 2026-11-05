@@ -49,6 +49,7 @@ export async function createApp(
       passwordHash: env.APP_PASSWORD_HASH,
       origins,
       secure: Boolean(publicOrigin),
+      partitioned: Boolean(publicOrigin),
     },
     { store, tickets },
   );
@@ -82,9 +83,8 @@ export async function createApp(
     res.set({
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "same-origin",
-      "X-Frame-Options": "SAMEORIGIN",
       "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-      "Content-Security-Policy": `default-src 'self'; script-src 'self'${process.argv.includes("--production") ? "" : " 'unsafe-inline'"}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'`,
+      "Content-Security-Policy": `default-src 'self'; script-src 'self'${process.argv.includes("--production") ? "" : " 'unsafe-inline'"}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'`,
     });
     if (publicOrigin && !req.secure)
       return res

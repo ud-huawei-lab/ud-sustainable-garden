@@ -26,9 +26,9 @@ AI is a disabled visual preview. There are no agent calls or connection-status b
 
 ## Data and security
 
-The branded sign-in screen uses server-validated authentication in both development and production. All `/api` routes, including readings, history, SSE, camera images, and HLS segments, require a valid session. The static application shell and logo contain no sensor data or secrets. Vercel uses authenticated encrypted HttpOnly/Secure/SameSite=Strict cookies with 30-minute expiry and no external session store. Logout clears the browser cookie and signs out other tabs; a copied cookie remains valid until expiry. Local hosting retains 12-hour in-memory sessions with immediate logout revocation. No auth tokens are stored in localStorage or sessionStorage.
+The branded sign-in screen uses server-validated authentication in both development and production. All `/api` routes, including readings, history, SSE, camera images, and HLS segments, require a valid session. The static application shell and logo contain no sensor data or secrets. Vercel uses authenticated encrypted HttpOnly/Secure/SameSite=None/Partitioned cookies with 30-minute expiry and no external session store. Logout clears the browser cookie and signs out other tabs; a copied cookie remains valid until expiry. Local hosting retains 12-hour in-memory sessions with immediate logout revocation. No auth tokens are stored in localStorage or sessionStorage.
 
-Login accepts at most eight attempts per client address in 15 minutes, with bounded password-verification concurrency. Unknown usernames and incorrect passwords receive the same error. Login/logout require an allowed Origin, and cross-site API requests are rejected. Requests have bounded bodies; security headers and a production Content Security Policy restrict executable content and framing.
+Login accepts at most eight attempts per client address in 15 minutes, with bounded password-verification concurrency. Unknown usernames and incorrect passwords receive the same error. Login/logout require an allowed Origin, and cross-site API requests are rejected. Requests have bounded bodies; security headers and a production Content Security Policy restrict executable content.
 
 The server signs in to Home Assistant and retains tokens in memory. Authentication steps share one persistent connection because the remote tunnel binds login flows to the request IP. Browser clients only receive allowlisted garden entities and stripped attributes. There is no device-control endpoint or unrestricted HA proxy.
 
@@ -58,3 +58,7 @@ Tests cover missing measurements and real zeros, date-range limits, credential f
 ## Reference
 
 The user's `ud-huawei-lab/digital-twin` repository supplied the visual reference, integration patterns, and University of Dubai logo assets. A temporary reference clone was used for inspection; the application is an independent project.
+
+### Embedding
+
+The dashboard can be embedded in Home Assistant or other websites. Framing restrictions are intentionally disabled. HTTPS sessions use partitioned cookies so each embedding site has its own sign-in; the parent website cannot read the cookie or call the protected API directly. Browsers must support partitioned cookies for embedded login. Local HTTP retains SameSite=Strict.

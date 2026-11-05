@@ -22,7 +22,13 @@ export async function hashPassword(password) {
 
 // One configured account, opaque server-side sessions, and no browser-readable tokens.
 export function createAuth(
-  { username, passwordHash, origins = [], secure = true } = {},
+  {
+    username,
+    passwordHash,
+    origins = [],
+    secure = true,
+    partitioned = false,
+  } = {},
   {
     now = Date.now,
     tickets,
@@ -31,6 +37,8 @@ export function createAuth(
     store = memoryStore({ now }),
   } = {},
 ) {
+  if (partitioned && !secure)
+    throw new Error("Embedded sessions require HTTPS.");
   if (!username || typeof username !== "string" || username.length > 128)
     throw new Error("Configure APP_USERNAME before starting the dashboard.");
   const encoded = hashPattern.exec(passwordHash || "");
@@ -48,7 +56,8 @@ export function createAuth(
   const cookieOptions = {
     httpOnly: true,
     secure,
-    sameSite: "strict",
+    sameSite: partitioned ? "none" : "strict",
+    partitioned,
     path: "/",
   };
   const sessions = new Map(); // Local timers/listeners only; credentials live in the store.

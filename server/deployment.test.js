@@ -5,6 +5,19 @@ const config = JSON.parse(
   readFileSync(new URL("../vercel.json", import.meta.url)),
 );
 
+test("hosted dashboard permits embedding without relaxing its content policy", () => {
+  const headers = config.headers.flatMap((rule) => rule.headers);
+  assert.ok(
+    !headers.some(({ key }) => key.toLowerCase() === "x-frame-options"),
+  );
+  const policy = headers.find(
+    ({ key }) => key === "Content-Security-Policy",
+  ).value;
+  assert.ok(!policy.includes("frame-ancestors"));
+  assert.ok(policy.includes("script-src 'self'"));
+  assert.ok(policy.includes("form-action 'self'"));
+});
+
 test("Vercel hosts the UI and API together without a separate backend origin", () => {
   assert.equal(config.framework, "vite");
   assert.equal(existsSync(new URL("../api/garden.js", import.meta.url)), true);
