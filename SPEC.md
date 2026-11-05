@@ -1,6 +1,12 @@
 # UD Sustainable Garden
 
-React + JSX dashboard with a Node backend. Local-first delivery; no hosting or public deployment.
+React + JSX dashboard with a Node backend and a Three.js digital garden. Local-first delivery; no hosting or public deployment.
+
+Independent hash routes: Home (#/home), Overview (#/overview), Readings (#/readings), History (#/history), CCTV (#/cameras). Home is the default. Readings owns the full grouped sensor directory; Overview contains only the reference weather layout. The Three.js scene is approximate, based on camera views; two humidity extractors and two plant pots immediately to their right are confirmed by the user. Remove all other trees. More photographs and dimensions are needed for a faithful reconstruction. Do not attach station cabinet readings to the extractors as though they were extractor measurements.
+
+Final sketch corrections: separate rear ground-mounted solar array to the extractors' left; tank behind the two pots; full-length parking canopy in front. Numbers 1–10 identify parking spaces, not solar panels. Camera 1 attaches to an extractor and Camera 2 to the canopy near its middle. Tubing routes are extractor → tank → plants, with illustrative flow animation. Pure white/black page and scene backgrounds, no Home frame, collapsible readings, neutral cards, color only for measurement scales. Group all station sensors under Temperature, Humidity, Wind, Pressure, Solar & UV, Rainfall, and Air Quality.
+
+Live data: one shared HA WebSocket state-change subscription, relayed to browser clients with SSE; coalesce bursts over 250 ms, reconnect automatically. Device reporting intervals remain the limit on new measurements. CCTV autoplays both muted LL-HLS feeds; handle nested video segments without exposing upstream credentials. History has a tile for every mapped sensor, with a centered chart modal; text sensors use a recorded-change table.
 
 Match the user's UD digital-twin weather reference: university branding, understated navigation, two wide top panels, three lower panels, large light-weight readings, subtle surfaces, light/dark theme, and a bottom ask bar. Extend the same language with history and two garden cameras. No status indicators, dots, connection badges, or fabricated readings. AI is display-only and makes no network requests.
 
