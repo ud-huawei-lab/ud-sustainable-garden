@@ -18,7 +18,7 @@ import {
 import { createGardenScene } from "./gardenScene.js";
 import { read } from "./data.js";
 import { gardenTrees } from "../shared/garden-layout.js";
-import { sceneWind } from "../shared/scene-weather.js";
+import { sceneWind, sceneBrightness } from "../shared/scene-weather.js";
 export default function Home({ entities, dark, onHistory, onCameras }) {
   const host = useRef(null),
     markers = useRef([]),
@@ -54,6 +54,10 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
         entities["sensor.ambient_weather_wind_direction"],
       ),
       entities["sun.sun"],
+      sceneBrightness(
+        entities["sensor.ambient_weather_illuminance"],
+        entities["sensor.ambient_weather_irradiance"],
+      ),
     );
   }, [entities, sunMode, dark, view]);
   const cycleTime = `${String(Math.floor(sunHour)).padStart(2, "0")}:${String(Math.floor((sunHour % 1) * 60)).padStart(2, "0")}`;
