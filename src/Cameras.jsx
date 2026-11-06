@@ -180,9 +180,24 @@ export function LivePlayer({ camera }) {
       className="camera-feed"
       aria-label={camera.name}
       data-paused={paused}
-      data-direction-open={directionOpen}
+      data-direction-open={directionOpen && panTilt}
       onKeyDown={(event) => {
         if (event.key === "Escape") setDirectionOpen(false);
+        if (
+          directionOpen &&
+          !["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)
+        ) {
+          const direction = {
+            ArrowUp: "up",
+            ArrowDown: "down",
+            ArrowLeft: "left",
+            ArrowRight: "right",
+          }[event.key];
+          if (direction) {
+            event.preventDefault();
+            if (!event.repeat) changeDirection(direction);
+          }
+        }
       }}
     >
       <video
@@ -264,21 +279,25 @@ export function LivePlayer({ camera }) {
                 <Volume2 size={16} />
               )}
             </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={muted ? 0 : volume}
-              aria-label={`${camera.name} volume`}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                video.current.volume = value;
-                video.current.muted = value === 0;
-                setVolume(value);
-                setMuted(value === 0);
-              }}
-            />
+            <div className="feed-volume-popover">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={muted ? 0 : volume}
+                aria-label={`${camera.name} volume`}
+                aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)} percent`}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  video.current.volume = value;
+                  video.current.muted = value === 0;
+                  setVolume(value);
+                  setMuted(value === 0);
+                }}
+              />
+              <span>{Math.round((muted ? 0 : volume) * 100)}%</span>
+            </div>
           </div>
           <button
             className="feed-live"
@@ -303,16 +322,6 @@ export function LivePlayer({ camera }) {
             <SkipForward size={14} />
             Live
           </button>
-          {panTilt && (
-            <button
-              aria-label={`Camera direction ${camera.name}`}
-              title="Camera direction"
-              aria-expanded={directionOpen}
-              onClick={() => setDirectionOpen((value) => !value)}
-            >
-              <Move size={16} />
-            </button>
-          )}
           <button
             aria-label={`${fullscreen ? "Exit fullscreen" : "Expand"} ${camera.name}`}
             title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
@@ -322,6 +331,17 @@ export function LivePlayer({ camera }) {
           </button>
         </div>
       )}
+      {playing && !error && panTilt && (
+        <button
+          className="feed-position-toggle"
+          aria-label={`Camera direction ${camera.name}`}
+          title={directionOpen ? "Close position controls" : "Pan and tilt"}
+          aria-expanded={directionOpen}
+          onClick={() => setDirectionOpen((value) => !value)}
+        >
+          <Move size={17} />
+        </button>
+      )}
       {panTilt && directionOpen && (
         <div
           className="feed-direction-panel"
@@ -329,7 +349,7 @@ export function LivePlayer({ camera }) {
           aria-label={`${camera.name} direction controls`}
           aria-busy={moving}
         >
-          <span>Camera direction</span>
+          <span>Pan and tilt</span>
           <div className="direction-pad">
             {[
               ["up", ChevronUp],
@@ -352,6 +372,11 @@ export function LivePlayer({ camera }) {
               </button>
             ))}
           </div>
+          <p className="direction-hint">
+            Tap or use arrow keys
+            <br />
+            Short nudges · Stop in centre
+          </p>
         </div>
       )}
       <div className="feed-caption">
