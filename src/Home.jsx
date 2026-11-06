@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { createGardenScene } from "./gardenScene.js";
 import { read } from "./data.js";
+import { gardenTrees } from "../shared/garden-layout.js";
 export default function Home({ entities, dark, onHistory, onCameras }) {
   const host = useRef(null),
     markers = useRef([]),
@@ -41,10 +42,10 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
   const labels = [
     ["Weather station", "Outdoor sensors", () => onHistory("temperature")],
     ["Humidity extractors", "Two units", () => onHistory("humidity")],
-    ["Plant pots", "Two pots · right of extractors", () => onCameras()],
     ["Water collection tank", "Extractor → tank → plants", () => onCameras()],
     ["Camera 1", "Extractor mount", onCameras],
     ["Camera 2", "Centre of parking canopy", onCameras],
+    ...gardenTrees.map((tree) => [tree.name, tree.level, onCameras]),
   ];
   return (
     <section className="twin-page">
@@ -61,10 +62,10 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
             <button
               key={title}
               ref={(element) => (markers.current[index] = element)}
-              className={`scene-label ${index >= 4 ? "camera-label" : ""}`}
+              className={`scene-label ${title.startsWith("Camera ") ? "camera-label" : ""}`}
               onClick={action}
             >
-              {index >= 4 && <Cctv size={14} />}
+              {title.startsWith("Camera ") && <Cctv size={14} />}
               <strong>{title}</strong>
               <span>{value}</span>
             </button>

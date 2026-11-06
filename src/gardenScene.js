@@ -1,5 +1,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import {
+  gardenTrees,
+  plantingHeight,
+  slopeBounds,
+  groundIrrigationRoutes,
+} from "../shared/garden-layout.js";
 
 // Camera-informed composition, intentionally approximate rather than survey geometry.
 export function createGardenScene(
@@ -11,7 +17,7 @@ export function createGardenScene(
   const plan = view === "2d";
   const scene = new THREE.Scene();
   // Let the page's green glow continue behind the model without a rectangular canvas background.
-  scene.fog = new THREE.Fog(dark ? "#000000" : "#ffffff", 36, 72);
+  scene.fog = new THREE.Fog(dark ? "#000000" : "#ffffff", 48, 90);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -31,16 +37,16 @@ export function createGardenScene(
   const camera = plan
     ? new THREE.OrthographicCamera(-14, 14, 12, -12, 0.1, 120)
     : new THREE.PerspectiveCamera(38, 1, 0.1, 120);
-  camera.position.set(...(plan ? [0, 32, 0.01] : [15, 23, 26]));
+  camera.position.set(...(plan ? [1.5, 32, 0.01] : [18, 24, 30]));
   if (plan) camera.up.set(0, 0, -1);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, plan ? 0 : 0.8, plan ? 0 : 1);
+  controls.target.set(1.5, plan ? 0 : 0.3, plan ? 0 : 0.5);
   controls.enableRotate = !plan;
   controls.minZoom = 0.5;
   controls.maxZoom = 3;
   controls.enableDamping = true;
   controls.minDistance = 10;
-  controls.maxDistance = 40;
+  controls.maxDistance = 48;
   controls.maxPolarAngle = Math.PI * 0.48;
   controls.enablePan = true;
   scene.add(
@@ -101,19 +107,86 @@ export function createGardenScene(
       z,
       parent,
     );
-  const ground = box(21, 0.3, 17, "#d2c1a0", 0, -0.22, 0);
+  const ground = box(15.2, 0.3, 17, "#c4c3b9", -2.9, -0.22, 0);
   ground.receiveShadow = true;
-  box(21.2, 0.13, 17.2, "#b7a78c", 0, -0.43, 0);
+  box(15.4, 0.13, 17.2, "#a9aaa3", -2.9, -0.43, 0);
   box(12.8, 0.16, 7.7, "#b9b7ac", -2.5, 0.02, -3.6);
+  // The paved installation meets a descending soil bank, not a second flat platform.
+  const terrain = new THREE.PlaneGeometry(
+    slopeBounds.right - slopeBounds.left,
+    17,
+    36,
+    40,
+  );
+  terrain.rotateX(-Math.PI / 2);
+  const positions = terrain.attributes.position;
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i) + (slopeBounds.left + slopeBounds.right) / 2;
+    const z = positions.getZ(i);
+    positions.setXYZ(i, x, plantingHeight(x, z), z);
+  }
+  terrain.computeVertexNormals();
+  const bank = mesh(terrain, "#c8b58e", 0, 0, 0);
+  bank.receiveShadow = true;
+  const grainPixels = new Uint8Array(128 * 128 * 4);
+  let grainSeed = 19;
+  for (let i = 0; i < 128 * 128; i++) {
+    grainSeed = (grainSeed * 16807) % 2147483647;
+    const shade = 0.86 + (grainSeed / 2147483647) * 0.22;
+    grainPixels[i * 4] = Math.round(218 * shade);
+    grainPixels[i * 4 + 1] = Math.round(194 * shade);
+    grainPixels[i * 4 + 2] = Math.round(151 * shade);
+    grainPixels[i * 4 + 3] = 255;
+  }
+  const sandTexture = new THREE.DataTexture(
+    grainPixels,
+    128,
+    128,
+    THREE.RGBAFormat,
+  );
+  sandTexture.colorSpace = THREE.SRGBColorSpace;
+  sandTexture.wrapS = sandTexture.wrapT = THREE.RepeatWrapping;
+  sandTexture.repeat.set(8, 12);
+  sandTexture.needsUpdate = true;
+  bank.material.color.set("#ffffff");
+  bank.material.map = sandTexture;
+  bank.material.bumpMap = sandTexture;
+  bank.material.bumpScale = 0.008;
+  bank.material.roughness = 1;
+  const edgePoints = [
+    [4.7, -8.5],
+    [14.2, -8.5],
+    [14.2, 8.5],
+    [4.7, 8.5],
+  ];
+  const sides = [];
+  edgePoints.forEach(([ax, az], i) => {
+    const [bx, bz] = edgePoints[(i + 1) % edgePoints.length];
+    const a = [ax, plantingHeight(ax, az), az],
+      b = [bx, plantingHeight(bx, bz), bz],
+      lowA = [ax, -2.65, az],
+      lowB = [bx, -2.65, bz];
+    sides.push(...a, ...b, ...lowA, ...lowA, ...b, ...lowB);
+  });
+  const bankSides = new THREE.BufferGeometry();
+  bankSides.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(sides, 3),
+  );
+  bankSides.computeVertexNormals();
+  mesh(bankSides, "#b09a75", 0, 0, 0);
+  box(0.12, 0.15, 17, "#aeb0a8", 4.62, -0.005, 0);
+  for (let z = -8; z <= 8; z += 1.2)
+    box(15.1, 0.006, 0.012, "#aeb0a8", -2.9, -0.066, z);
   const dummy = new THREE.Object3D();
   let seed = 45;
   const random = () => {
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
   };
-  function tree(x, z, size, potted = false, kind = 0) {
+  function tree(x, z, size, potted = false, kind = 0, elevation = 0) {
     const group = new THREE.Group();
-    group.position.set(x, 0, z);
+    group.position.set(x, elevation, z);
     scene.add(group);
     if (potted) {
       cylinder(0.59, 0.39, 0.78, "#f0ede2", 0, 0.43, 0, group);
@@ -146,7 +219,13 @@ export function createGardenScene(
       limb.rotation.x = Math.cos(angle) * 0.65;
     }
     const leafMaterial = material(
-      kind === 1 ? "#668658" : kind === 2 ? "#8b965f" : "#52794d",
+      kind === 1
+        ? "#668658"
+        : kind === 2
+          ? "#8b965f"
+          : kind === 3
+            ? "#6f8651"
+            : "#52794d",
     );
     const leaves = new THREE.InstancedMesh(
       new THREE.SphereGeometry(1, 6, 4),
@@ -159,9 +238,9 @@ export function createGardenScene(
       const radius = Math.cbrt(random());
       const spread = Math.sqrt(1 - vertical * vertical);
       dummy.position.set(
-        Math.cos(theta) * spread * radius * 0.85 * size,
-        base + (1.8 + vertical * radius * 0.7) * size,
-        Math.sin(theta) * spread * radius * 0.75 * size,
+        Math.cos(theta) * spread * radius * (kind === 2 ? 1.15 : 0.85) * size,
+        base + (1.8 + vertical * radius * (kind === 2 ? 0.5 : 0.7)) * size,
+        Math.sin(theta) * spread * radius * (kind === 2 ? 1 : 0.75) * size,
       );
       dummy.scale.set(
         (0.09 + random() * 0.06) * size,
@@ -177,8 +256,7 @@ export function createGardenScene(
     return group;
   }
   // Two humidity extractors, with two potted plants immediately to their right.
-  tree(1.2, -3.1, 1.05, true);
-  tree(2.8, -3.1, 0.9, true, 1);
+  gardenTrees.forEach((t) => tree(t.x, t.z, t.size, t.potted, t.kind, t.y));
   // Equipment cabinets and weather mast.
   for (const x of [-2.8, -1.1]) {
     box(0.72, 3.1, 0.62, "#dddeda", x, 1.68, -4.1);
@@ -344,15 +422,20 @@ export function createGardenScene(
     [2.8, 0.3, -4.1],
     [2.8, 0.88, -3.1],
   ]);
+  groundIrrigationRoutes.forEach(tube);
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const arrowUp = new THREE.Vector3(0, 1, 0);
   const markerPositions = [
     [-4.3, 4.7, -5.5],
     [-1.8, 3.7, -4.1],
-    [2.0, 3.1, -3.1],
     [2, 2.6, -5.8],
     [-1.1, 4.1, -3.6],
     [-2, 3.5, 0.65],
+    ...gardenTrees.map((t) => [
+      t.x,
+      t.y + (t.potted ? 0.82 : 0) + 2.8 * t.size,
+      t.z,
+    ]),
   ];
   const vector = new THREE.Vector3();
   let labelsVisible = false;
@@ -406,20 +489,26 @@ export function createGardenScene(
       vector.set(...position).project(camera);
       const offsets = plan
         ? [
-            [-100, -20],
-            [-30, 40],
-            [90, 20],
-            [90, -10],
-            [-100, -10],
+            [-120, -20],
+            [-70, 50],
+            [100, -30],
+            [-130, 0],
             [0, 50],
+            [-50, 25],
+            [70, 40],
+            [90, -10],
+            [80, 10],
           ]
         : [
-            [-150, -50],
-            [0, -90],
-            [160, 10],
-            [160, -20],
-            [-150, 0],
+            [-140, -30],
+            [-15, -75],
+            [150, -20],
+            [-150, 20],
             [0, 80],
+            [-60, -25],
+            [70, 5],
+            [35, -20],
+            [25, -5],
           ];
       const scale = Math.min(1, width / 900);
       const [offsetX, offsetY] = offsets[index];
@@ -471,13 +560,13 @@ export function createGardenScene(
         return;
       }
       const offset = camera.position.clone().sub(controls.target);
-      offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, 10, 40));
+      offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, 10, 48));
       camera.position.copy(controls.target).add(offset);
       controls.update();
     },
     reset() {
-      camera.position.set(...(plan ? [0, 32, 0.01] : [15, 23, 26]));
-      controls.target.set(0, plan ? 0 : 0.8, plan ? 0 : 1);
+      camera.position.set(...(plan ? [1.5, 32, 0.01] : [18, 24, 30]));
+      controls.target.set(1.5, plan ? 0 : 0.3, plan ? 0 : 0.5);
       if (plan) {
         camera.zoom = 1;
         camera.updateProjectionMatrix();
@@ -492,6 +581,7 @@ export function createGardenScene(
       scene.traverse((object) => object.geometry?.dispose());
       materials.forEach((m) => m.dispose());
       parkingTextures.forEach((texture) => texture.dispose());
+      sandTexture.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },
