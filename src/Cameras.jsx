@@ -372,11 +372,6 @@ export function LivePlayer({ camera }) {
               </button>
             ))}
           </div>
-          <p className="direction-hint">
-            Tap or use arrow keys
-            <br />
-            Short nudges · Stop in centre
-          </p>
         </div>
       )}
       <div className="feed-caption">
