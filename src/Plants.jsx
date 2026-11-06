@@ -1,9 +1,9 @@
-import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { format, time } from "./data.js";
 import GrowthMarks from "./GrowthMarks.jsx";
 import { sampleNights, SHOW_SAMPLE_GROWTH } from "./growthSample.js";
 import { Chart } from "./History.jsx";
+import InfoTip from "./InfoTip.jsx";
 import Skeleton from "./Skeleton.jsx";
 import { Panel, Stat } from "./Weather.jsx";
 
@@ -139,45 +139,6 @@ export default function PlantsPage() {
   return (
     <section className="plants-page" aria-label="Plant size">
       <div className="plants-view">
-        <figure className="plants-figure">
-          <svg
-            className="plants-frame"
-            viewBox={POTS_VIEW}
-            role="img"
-            aria-label={`Night view of both pots, measured ${time(data.capturedAt, dayLabel)}`}
-          >
-            <image
-              href="/api/growth/frame"
-              width={data.frame.width}
-              height={data.frame.height}
-            />
-            <GrowthMarks plants={data.plants} labelSize={30} />
-          </svg>
-          <figcaption className="plants-caption">
-            Measured from the Camera 1 4K night frame,{" "}
-            {time(data.capturedAt, {
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            .
-            <span
-              className="plants-info"
-              tabIndex={0}
-              role="note"
-              aria-label="How these values are measured"
-            >
-              <Info size={14} />
-              <span className="plants-tooltip">
-                Camera estimate, measured from the pot rim. Scale assumes pots{" "}
-                {format(data.potWidths.left, 0)} cm and{" "}
-                {format(data.potWidths.right, 0)} cm wide. Leaf cover shows
-                fullness, not a leaf count.
-              </span>
-            </span>
-          </figcaption>
-        </figure>
         <div
           className="plants-cameras"
           role="group"
@@ -208,6 +169,37 @@ export default function PlantsPage() {
             </span>
           </button>
         </div>
+        <figure className="plants-figure">
+          <svg
+            className="plants-frame"
+            viewBox={POTS_VIEW}
+            role="img"
+            aria-label={`Night view of both pots, measured ${time(data.capturedAt, dayLabel)}`}
+          >
+            <image
+              href="/api/growth/frame"
+              width={data.frame.width}
+              height={data.frame.height}
+            />
+            <GrowthMarks plants={data.plants} labelSize={30} />
+          </svg>
+          <figcaption className="plants-caption">
+            Measured from the Camera 1 4K night frame,{" "}
+            {time(data.capturedAt, {
+              day: "numeric",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            .
+            <InfoTip label="How these values are measured">
+              Camera estimate, measured from the pot rim. Scale assumes pots{" "}
+              {format(data.potWidths.left, 0)} cm and{" "}
+              {format(data.potWidths.right, 0)} cm wide. Leaf cover shows
+              fullness, not a leaf count.
+            </InfoTip>
+          </figcaption>
+        </figure>
       </div>
       <div className="plants-side">
         {data.plants.map((plant) => (

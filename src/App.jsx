@@ -6,7 +6,7 @@ import {
   Cctv,
   Box,
   X,
-  Columns3,
+  Gauge,
   LogOut,
   Droplets,
   Sprout,
@@ -64,6 +64,7 @@ export default function App({ onSignOut, signingOut }) {
   useEffect(() => {
     if (metric && !dialog.current.open) dialog.current.showModal();
   }, [metric]);
+  const fullPage = page === "plants" || page === "water";
   const navigate = (target) => {
     location.hash = `/${target}`;
   };
@@ -96,7 +97,7 @@ export default function App({ onSignOut, signingOut }) {
             ["water", "Water", Droplets],
             ["plants", "Plants", Sprout],
             ["overview", "Overview", LayoutGrid],
-            ["readings", "Reading", Columns3],
+            ["readings", "Reading", Gauge],
             ["cameras", "CCTV", Cctv],
           ].map(([id, label, Icon]) => (
             <a
@@ -132,7 +133,7 @@ export default function App({ onSignOut, signingOut }) {
         </div>
       </header>
       <main id="page-content" tabIndex={-1} className={`page-${page}`}>
-        <div className={`page-intro${page === "plants" ? " hidden-intro" : ""}`}>
+        <div className={`page-intro${fullPage ? " hidden-intro" : ""}`}>
           <h1>
             Sustainable Garden{" "}
             <span className="page-name">/ {pages[page]}</span>
@@ -185,7 +186,7 @@ export default function App({ onSignOut, signingOut }) {
           )
         )}
         {page === "cameras" && <Cameras />}
-        {page !== "home" && page !== "plants" && (
+        {page !== "home" && !fullPage && (
           <footer className="page-footer">
             <span>University of Dubai · Sustainable Garden</span>
             <span>All times in Dubai · UTC+4</span>
