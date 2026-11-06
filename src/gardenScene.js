@@ -69,6 +69,7 @@ export function createGardenScene(
   scene.add(light.target);
   scene.add(light);
   let measuredBrightness = null;
+  let sunEnabled = false;
   let liveSun = null,
     sunMode = "live",
     cycleHour = sunHour,
@@ -486,8 +487,13 @@ export function createGardenScene(
     const delta = Math.min(0.1, (now - lastFrameTime) / 1000);
     lastFrameTime = now;
     const flowTime = now / 1000;
-    if (sunMode === "running") cycleHour = (cycleHour + (delta * 24) / 90) % 24;
-    const sun = sunMode === "live" ? liveSun : dayCycleSun(cycleHour);
+    if (sunEnabled && sunMode === "running")
+      cycleHour = (cycleHour + (delta * 24) / 90) % 24;
+    const sun = sunEnabled
+      ? sunMode === "live"
+        ? liveSun
+        : dayCycleSun(cycleHour)
+      : null;
     if (sun) {
       const elevation = THREE.MathUtils.degToRad(sun.elevation);
       const azimuth = THREE.MathUtils.degToRad(sun.azimuth);
@@ -510,13 +516,22 @@ export function createGardenScene(
     const directBrightness = sun && sun.elevation <= 0 ? 0 : brightness;
     const lightingBlend = 1 - Math.exp(-delta * 2);
     light.intensity +=
-      ((dark ? 3 : 4.2) * directBrightness - light.intensity) * lightingBlend;
+      ((sunEnabled ? (dark ? 3 : 4.2) * directBrightness : dark ? 2.6 : 3.8) -
+        light.intensity) *
+      lightingBlend;
     ambient.intensity +=
-      ((dark ? 1.05 : 1.4) +
-        brightness * (dark ? 1.2 : 1.4) -
+      ((sunEnabled
+        ? (dark ? 1.05 : 1.4) + brightness * (dark ? 1.2 : 1.4)
+        : dark
+          ? 1.9
+          : 2.7) -
         ambient.intensity) *
       lightingBlend;
-    if (sunMode !== "live" && Math.floor(flowTime) !== lastSunTick) {
+    if (
+      sunEnabled &&
+      sunMode !== "live" &&
+      Math.floor(flowTime) !== lastSunTick
+    ) {
       lastSunTick = Math.floor(flowTime);
       onSunTime(cycleHour);
     }
@@ -597,6 +612,9 @@ export function createGardenScene(
   }
   render();
   return {
+    setSunEnabled(enabled) {
+      sunEnabled = enabled;
+    },
     setWeather(nextWind, sun, brightness = null) {
       wind = nextWind;
       measuredBrightness = brightness;

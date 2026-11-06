@@ -28,6 +28,7 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
   const [revolving, setRevolving] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
   const [sunMode, setSunMode] = useState("live");
+  const [sunEnabled, setSunEnabled] = useState(false);
   const [sunHour, setSunHour] = useState(6);
   useEffect(() => {
     try {
@@ -47,6 +48,7 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     scene.current?.setLabelsVisible(showLabels);
   }, [revolving, showLabels, dark, view]);
   useEffect(() => {
+    scene.current?.setSunEnabled(sunEnabled);
     scene.current?.setSunMode(sunMode);
     scene.current?.setWeather(
       sceneWind(
@@ -59,7 +61,7 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
         entities["sensor.ambient_weather_irradiance"],
       ),
     );
-  }, [entities, sunMode, dark, view]);
+  }, [entities, sunMode, sunEnabled, dark, view]);
   const cycleTime = `${String(Math.floor(sunHour)).padStart(2, "0")}:${String(Math.floor((sunHour % 1) * 60)).padStart(2, "0")}`;
   const labels = [
     ["Weather station", "Outdoor sensors", () => onHistory("temperature")],
@@ -231,42 +233,56 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
                   onChange={(event) => setShowLabels(event.target.checked)}
                 />
               </label>
-              <div className="scene-sun-controls">
-                <div>
-                  <Sun size={14} />
-                  <span>Sun time-lapse</span>
-                  <button
-                    className="icon-button"
-                    aria-label={
-                      sunMode === "running"
-                        ? "Pause sun time-lapse"
-                        : "Play sun time-lapse"
-                    }
-                    onClick={() =>
-                      setSunMode(sunMode === "running" ? "paused" : "running")
-                    }
-                  >
-                    {sunMode === "running" ? (
-                      <Pause size={14} />
-                    ) : (
-                      <Play size={14} />
-                    )}
-                  </button>
-                </div>
-                <div className="scene-sun-detail">
-                  <span>
-                    {sunMode === "live"
-                      ? "Live sun"
-                      : `${cycleTime} · Day cycle`}
-                  </span>
-                  {sunMode !== "live" && (
-                    <button onClick={() => setSunMode("live")}>
-                      Return to live
+              <label>
+                <span>Sun lighting</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={sunEnabled}
+                  onChange={(event) => {
+                    setSunEnabled(event.target.checked);
+                    setSunMode("live");
+                  }}
+                />
+              </label>
+              {sunEnabled && (
+                <div className="scene-sun-controls">
+                  <div>
+                    <Sun size={14} />
+                    <span>Sun time-lapse</span>
+                    <button
+                      className="icon-button"
+                      aria-label={
+                        sunMode === "running"
+                          ? "Pause sun time-lapse"
+                          : "Play sun time-lapse"
+                      }
+                      onClick={() =>
+                        setSunMode(sunMode === "running" ? "paused" : "running")
+                      }
+                    >
+                      {sunMode === "running" ? (
+                        <Pause size={14} />
+                      ) : (
+                        <Play size={14} />
+                      )}
                     </button>
-                  )}
+                  </div>
+                  <div className="scene-sun-detail">
+                    <span>
+                      {sunMode === "live"
+                        ? "Live sun"
+                        : `${cycleTime} · Day cycle`}
+                    </span>
+                    {sunMode !== "live" && (
+                      <button onClick={() => setSunMode("live")}>
+                        Return to live
+                      </button>
+                    )}
+                  </div>
+                  <small>Illustrative cycle · 90 seconds per day</small>
                 </div>
-                <small>Illustrative cycle · 90 seconds per day</small>
-              </div>
+              )}
             </div>
           </details>
         </div>
