@@ -5,6 +5,7 @@ import { RealtimeReadings } from "./realtime.js";
 import { mediaPath, rewritePlaylist } from "./media.js";
 import { historyRange } from "./data.js";
 import { history } from "./history.js";
+import { waterInsights, waterRanges } from "./water.js";
 import { createAuth, createLocalAccess, skipsSignIn } from "./auth.js";
 import { memoryStore } from "./store.js";
 import { createTickets } from "./tickets.js";
@@ -70,6 +71,7 @@ export async function createApp(
   const ha = new HomeAssistant(env);
   const cache = new Map();
   const snapshots = new Map();
+  const waterCache = new Map();
   let statesCache = { at: 0, data: null };
   let statesPromise;
   const realtime = new RealtimeReadings(ha, (snapshot) => {
@@ -215,6 +217,16 @@ export async function createApp(
     const data = await history(ha, metric, range, env);
     if (cache.size >= 40) cache.delete(cache.keys().next().value);
     cache.set(key, { at: Date.now(), data });
+    res.json(data);
+  });
+  app.get("/api/water", async (req, res) => {
+    const range = req.query.range || "7d";
+    if (!waterRanges.includes(range))
+      return res.status(400).json({ error: "Choose a supported water range." });
+    const cached = waterCache.get(range);
+    if (cached && Date.now() - cached.at < 300000) return res.json(cached.data);
+    const data = await waterInsights(ha, range);
+    waterCache.set(range, { at: Date.now(), data });
     res.json(data);
   });
   const cameraFor = (id) => cameras.find((c) => c.id === id);

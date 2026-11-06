@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add the Water page: calculated absolute humidity, VPD and FAO-56 ET0 with dew point, from existing station history. Outages stay blank.
+- `npm run dev` on loopback skips sign-in. Deployments and `npm start` still require it.
+- Keep the assistant panel collapsed when models fail to load, and let its collapse button work.
 - Add the original dashboard's branded sign-in experience using the existing account, salted scrypt password hashes, and opaque server-side sessions.
 - Protect all data, history, live-event, and camera endpoints with origin checks, login limits, and HTTPS enforcement. Vercel uses 30-minute cookies; local hosting retains 12-hour revocable sessions.
 - Host the frontend and Node API together on Vercel with no Redis or storage subscription. Use 30-minute encrypted session cookies and encrypted camera routing context across function instances. Logout clears the browser cookie; copied cookies expire naturally. Local hosting retains in-memory session revocation.

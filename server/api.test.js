@@ -73,6 +73,7 @@ test("HTTP boundary protects garden data, rejects arbitrary writes, and validate
     "/api/readings",
     "/api/events",
     "/api/history",
+    "/api/water",
     "/api/cameras/trees/snapshot",
     "/api/cameras/trees/live",
     "/api/video/trees/master.m3u8",
@@ -113,8 +114,13 @@ test("HTTP boundary protects garden data, rejects arbitrary writes, and validate
     "/api/history?metric=constructor",
     "/api/history?range=all",
     "/api/history?start=bad&end=bad",
+    "/api/water?range=24h",
+    "/api/water?range=constructor",
   ])
     assert.equal((await request(base + path)).status, 400);
+  const water = await (await request(`${base}/api/water?range=7d`)).json();
+  assert.equal(water.absoluteHumidity.stats.mean, null);
+  assert.ok(water.days.every((day) => day.et0 === null));
   for (const path of [
     "/api/cameras/unknown/snapshot",
     "/api/states",

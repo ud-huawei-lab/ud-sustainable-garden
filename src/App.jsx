@@ -8,6 +8,7 @@ import {
   X,
   Columns3,
   LogOut,
+  Droplets,
 } from "lucide-react";
 import { useReadings } from "./data.js";
 import { Headline, Solar, WindPanel, RainPanel, AirPanel } from "./Weather.jsx";
@@ -16,9 +17,11 @@ import Cameras from "./Cameras.jsx";
 import ReadingPage from "./Sensors.jsx";
 import Skeleton from "./Skeleton.jsx";
 import Assistant from "./Assistant.jsx";
+import WaterPage from "./Water.jsx";
 const Home = lazy(() => import("./Home.jsx"));
 const pages = {
   home: "Digital garden",
+  water: "Air moisture & plant demand",
   overview: "Current readings",
   readings: "Reading & history",
   cameras: "Garden CCTV",
@@ -87,6 +90,7 @@ export default function App({ onSignOut, signingOut }) {
         <nav aria-label="Main navigation">
           {[
             ["home", "Home", Box],
+            ["water", "Water", Droplets],
             ["overview", "Overview", LayoutGrid],
             ["readings", "Reading", Columns3],
             ["cameras", "CCTV", Cctv],
@@ -149,6 +153,9 @@ export default function App({ onSignOut, signingOut }) {
               onCameras={() => navigate("cameras")}
             />
           </Suspense>
+        )}
+        {page === "water" && (
+          <WaterPage entities={data.entities} onHistory={showHistory} />
         )}
         {page === "overview" && !data.fetchedAt && !data.error ? (
           <Skeleton kind="overview" />

@@ -18,6 +18,7 @@ Open http://127.0.0.1:5173 and sign in. For development with hot reload, use `np
 ## Pages
 
 - **Home:** Three.js reconstruction with orbit, zoom, keyboard-operable view controls, equipment labels, and real station readings. Two humidity extractors and two pots to their right. Layout and foliage are approximate, not a photogrammetry scan.
+- **Water:** air moisture (absolute humidity, dew point) and plant demand (FAO-56 ET0, vapour pressure deficit) now and over 7 or 30 days. Everything except dew point is a calculated estimate from station data. No device measures litres, soil moisture or plant health yet.
 - **Overview:** the weather reference layout with current conditions and bright UV, irradiance, and AQI scales. The full sensor directory is separate.
 - **Reading:** all 23 live readings and their history, grouped into three independent category columns that adapt to two columns on tablets and one on phones. Select any sensor for a centered history dialog with 24-hour, 7-day, 30-day, or custom ranges, Dubai timestamps, and CSV export. Values follow the pointer in an edge-constrained tooltip. There is no graph slider; focus the graph and use arrow keys, Home, or End for keyboard exploration. Old `#/history` and `#/columnar` links open Reading. Cards remain monochrome; color is reserved for measurement scales.
 - **CCTV:** both camera feeds start automatically using HLS.js. Streams are muted by default; fullscreen/expanded views are available. Compact playback and sound controls remain available; unavailable streams show a retry action.
