@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { hashPassword } from "./auth.js";
 
-test("HTTP boundary exposes only garden data, rejects writes, and validates historical inputs", async (t) => {
+test("HTTP boundary protects garden data, rejects arbitrary writes, and validates historical inputs", async (t) => {
   const upstream = createServer((req, res) => {
     if (req.url === "/api/websocket") {
       res.writeHead(400);
@@ -77,6 +77,7 @@ test("HTTP boundary exposes only garden data, rejects writes, and validates hist
     "/api/cameras/trees/live",
     "/api/video/trees/master.m3u8",
     "/api/ai/models",
+    "/api/cameras/trees/controls",
   ])
     assert.equal((await fetch(base + path)).status, 401);
   const login = await fetch(base + "/auth/login", {
@@ -90,11 +91,13 @@ test("HTTP boundary exposes only garden data, rejects writes, and validates hist
   assert.equal(login.status, 200);
   const cookie = login.headers.get("set-cookie").split(";")[0];
   for (const origin of [undefined, "https://unrelated.example"]) {
-    const response = await fetch(base + "/api/ai/analyze", {
-      method: "POST",
-      headers: { Cookie: cookie, ...(origin ? { Origin: origin } : {}) },
-    });
-    assert.equal(response.status, 403);
+    for (const path of ["/api/ai/analyze", "/api/cameras/trees/ptz"]) {
+      const response = await fetch(base + path, {
+        method: "POST",
+        headers: { Cookie: cookie, ...(origin ? { Origin: origin } : {}) },
+      });
+      assert.equal(response.status, 403);
+    }
   }
   const request = (url, options = {}) =>
     fetch(url, { ...options, headers: { Cookie: cookie, ...options.headers } });

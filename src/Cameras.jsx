@@ -8,6 +8,13 @@ import {
   Volume2,
   VolumeX,
   SkipForward,
+  Minimize2,
+  Move,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Square,
 } from "lucide-react";
 import { cameras } from "../shared/catalog.js";
 import Skeleton from "./Skeleton.jsx";
@@ -25,6 +32,59 @@ export function LivePlayer({ camera }) {
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(1);
+  const [panTilt, setPanTilt] = useState(false);
+  const [directionOpen, setDirectionOpen] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    setPanTilt(false);
+    fetch(`/api/cameras/${camera.id}/controls`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!controller.signal.aborted) setPanTilt(data?.panTilt === true);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [camera.id]);
+  useEffect(() => {
+    const changed = () =>
+      setFullscreen(document.fullscreenElement === container.current);
+    document.addEventListener("fullscreenchange", changed);
+    return () => document.removeEventListener("fullscreenchange", changed);
+  }, []);
+  const changeDirection = async (direction) => {
+    if (moving && direction !== "stop") return;
+    if (direction !== "stop") setMoving(true);
+    setExpandError("");
+    try {
+      const response = await fetch(`/api/cameras/${camera.id}/ptz`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ direction }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Direction control is unavailable.");
+      }
+    } catch (error) {
+      setExpandError(error.message || "Direction control is unavailable.");
+    } finally {
+      if (direction !== "stop") setMoving(false);
+    }
+  };
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await container.current.requestFullscreen();
+      setExpandError("");
+    } catch {
+      setExpandError("Fullscreen is unavailable in this browser.");
+    }
+  };
   useEffect(() => {
     const tick = () =>
       setClock(
@@ -115,7 +175,16 @@ export function LivePlayer({ camera }) {
     };
   }, [camera.id, attempt]);
   return (
-    <article ref={container} className="camera-feed" aria-label={camera.name}>
+    <article
+      ref={container}
+      className="camera-feed"
+      aria-label={camera.name}
+      data-paused={paused}
+      data-direction-open={directionOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setDirectionOpen(false);
+      }}
+    >
       <video
         ref={video}
         autoPlay
@@ -124,6 +193,7 @@ export function LivePlayer({ camera }) {
         aria-label={`${camera.name} live feed`}
         onWaiting={() => setBuffering(true)}
         onStalled={() => setBuffering(true)}
+        onPlay={() => setPaused(false)}
         onPause={() => {
           setPaused(true);
           setBuffering(false);
@@ -162,6 +232,7 @@ export function LivePlayer({ camera }) {
         >
           <button
             aria-label={`${paused ? "Play" : "Pause"} ${camera.name}`}
+            title={paused ? "Play" : "Pause"}
             onClick={async () => {
               try {
                 if (video.current.paused) await video.current.play();
@@ -174,41 +245,45 @@ export function LivePlayer({ camera }) {
           >
             {paused ? <Play size={16} /> : <Pause size={16} />}
           </button>
-          <button
-            aria-label={`${muted ? "Unmute" : "Mute"} ${camera.name}`}
-            onClick={() => {
-              if (muted && volume === 0) {
-                video.current.volume = 1;
-                setVolume(1);
-              }
-              video.current.muted = !muted;
-              setMuted(!muted);
-            }}
-          >
-            {muted || volume === 0 ? (
-              <VolumeX size={16} />
-            ) : (
-              <Volume2 size={16} />
-            )}
-          </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={muted ? 0 : volume}
-            aria-label={`${camera.name} volume`}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              video.current.volume = value;
-              video.current.muted = value === 0;
-              setVolume(value);
-              setMuted(value === 0);
-            }}
-          />
+          <div className="feed-volume">
+            <button
+              aria-label={`${muted ? "Unmute" : "Mute"} ${camera.name}`}
+              title={muted ? "Unmute" : "Mute"}
+              onClick={() => {
+                if (muted && volume === 0) {
+                  video.current.volume = 1;
+                  setVolume(1);
+                }
+                video.current.muted = !muted;
+                setMuted(!muted);
+              }}
+            >
+              {muted || volume === 0 ? (
+                <VolumeX size={16} />
+              ) : (
+                <Volume2 size={16} />
+              )}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={muted ? 0 : volume}
+              aria-label={`${camera.name} volume`}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                video.current.volume = value;
+                video.current.muted = value === 0;
+                setVolume(value);
+                setMuted(value === 0);
+              }}
+            />
+          </div>
           <button
             className="feed-live"
             aria-label={`Return ${camera.name} to live`}
+            title="Return to live"
             onClick={async () => {
               const media = video.current;
               const target = liveEngine.current?.liveSyncPosition;
@@ -228,27 +303,61 @@ export function LivePlayer({ camera }) {
             <SkipForward size={14} />
             Live
           </button>
+          {panTilt && (
+            <button
+              aria-label={`Camera direction ${camera.name}`}
+              title="Camera direction"
+              aria-expanded={directionOpen}
+              onClick={() => setDirectionOpen((value) => !value)}
+            >
+              <Move size={16} />
+            </button>
+          )}
+          <button
+            aria-label={`${fullscreen ? "Exit fullscreen" : "Expand"} ${camera.name}`}
+            title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            onClick={toggleFullscreen}
+          >
+            {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+        </div>
+      )}
+      {panTilt && directionOpen && (
+        <div
+          className="feed-direction-panel"
+          role="group"
+          aria-label={`${camera.name} direction controls`}
+          aria-busy={moving}
+        >
+          <span>Camera direction</span>
+          <div className="direction-pad">
+            {[
+              ["up", ChevronUp],
+              ["left", ChevronLeft],
+              ["stop", Square],
+              ["right", ChevronRight],
+              ["down", ChevronDown],
+            ].map(([direction, Icon]) => (
+              <button
+                key={direction}
+                className={`direction-${direction}`}
+                disabled={moving && direction !== "stop"}
+                title={
+                  direction === "stop" ? "Stop camera" : `Nudge ${direction}`
+                }
+                aria-label={`${direction === "stop" ? "Stop" : `Nudge ${direction}`} ${camera.name}`}
+                onClick={() => changeDirection(direction)}
+              >
+                <Icon size={direction === "stop" ? 12 : 17} />
+              </button>
+            ))}
+          </div>
         </div>
       )}
       <div className="feed-caption">
         <span>{camera.name}</span>
         <div>
           <time title="Current time in Dubai">{clock}</time>
-          <button
-            aria-label={`Expand ${camera.name}`}
-            title="Fullscreen"
-            onClick={async () => {
-              try {
-                if (document.fullscreenElement) await document.exitFullscreen();
-                else await container.current.requestFullscreen();
-                setExpandError("");
-              } catch {
-                setExpandError("Fullscreen is unavailable in this browser.");
-              }
-            }}
-          >
-            <Maximize2 size={16} />
-          </button>
         </div>
       </div>
       {expandError && (
