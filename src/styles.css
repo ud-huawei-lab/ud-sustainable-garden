@@ -3789,6 +3789,38 @@ input {
   }
 }
 
+.scene-sun-controls {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.scene-sun-controls > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.scene-sun-controls .icon-button {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+}
+.scene-sun-detail {
+  justify-content: space-between;
+  min-height: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.scene-sun-detail button {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 10px;
+  padding: 4px 0;
+}
+.scene-sun-controls small {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+}
 /* PTZ stays on the left. Audio and playback keep a fixed position on the right. */
 .camera-feed {
   --direction-rail: 156px;

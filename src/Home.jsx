@@ -12,10 +12,13 @@ import {
   Minus,
   ChevronDown,
   Settings2,
+  Play,
+  Pause,
 } from "lucide-react";
 import { createGardenScene } from "./gardenScene.js";
 import { read } from "./data.js";
 import { gardenTrees } from "../shared/garden-layout.js";
+import { sceneWind } from "../shared/scene-weather.js";
 export default function Home({ entities, dark, onHistory, onCameras }) {
   const host = useRef(null),
     markers = useRef([]),
@@ -24,11 +27,15 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
   const [view, setView] = useState("3d");
   const [revolving, setRevolving] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
+  const [sunMode, setSunMode] = useState("live");
+  const [sunHour, setSunHour] = useState(6);
   useEffect(() => {
     try {
       setError(false);
       scene.current = createGardenScene(host.current, dark, markers.current, {
         view,
+        sunHour,
+        onSunTime: setSunHour,
       });
     } catch {
       setError(true);
@@ -39,6 +46,17 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
     scene.current?.setRevolving(revolving);
     scene.current?.setLabelsVisible(showLabels);
   }, [revolving, showLabels, dark, view]);
+  useEffect(() => {
+    scene.current?.setSunMode(sunMode);
+    scene.current?.setWeather(
+      sceneWind(
+        entities["sensor.ambient_weather_wind_speed"],
+        entities["sensor.ambient_weather_wind_direction"],
+      ),
+      entities["sun.sun"],
+    );
+  }, [entities, sunMode, dark, view]);
+  const cycleTime = `${String(Math.floor(sunHour)).padStart(2, "0")}:${String(Math.floor((sunHour % 1) * 60)).padStart(2, "0")}`;
   const labels = [
     ["Weather station", "Outdoor sensors", () => onHistory("temperature")],
     ["Humidity extractors", "Two units", () => onHistory("humidity")],
@@ -209,6 +227,42 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
                   onChange={(event) => setShowLabels(event.target.checked)}
                 />
               </label>
+              <div className="scene-sun-controls">
+                <div>
+                  <Sun size={14} />
+                  <span>Sun time-lapse</span>
+                  <button
+                    className="icon-button"
+                    aria-label={
+                      sunMode === "running"
+                        ? "Pause sun time-lapse"
+                        : "Play sun time-lapse"
+                    }
+                    onClick={() =>
+                      setSunMode(sunMode === "running" ? "paused" : "running")
+                    }
+                  >
+                    {sunMode === "running" ? (
+                      <Pause size={14} />
+                    ) : (
+                      <Play size={14} />
+                    )}
+                  </button>
+                </div>
+                <div className="scene-sun-detail">
+                  <span>
+                    {sunMode === "live"
+                      ? "Live sun"
+                      : `${cycleTime} · Day cycle`}
+                  </span>
+                  {sunMode !== "live" && (
+                    <button onClick={() => setSunMode("live")}>
+                      Return to live
+                    </button>
+                  )}
+                </div>
+                <small>Illustrative cycle · 90 seconds per day</small>
+              </div>
             </div>
           </details>
         </div>
