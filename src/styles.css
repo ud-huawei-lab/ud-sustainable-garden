@@ -4215,12 +4215,12 @@ input {
 /* Plants has its own green light theme. Tokens keep the header and chart in step. */
 :root:not([data-theme="dark"]):has(.page-plants) {
   --page-background: linear-gradient(
-    150deg,
-    #0d3d2d 0%,
-    #17573d 14%,
-    #3a8559 36%,
-    #236b4a 66%,
-    #0f4533 100%
+    100deg,
+    #07231a 0%,
+    #0b3324 34%,
+    #1b5c40 56%,
+    #2f7d55 78%,
+    #1d6044 100%
   );
   --base: #0c2c20;
   --surface: transparent;
@@ -4380,6 +4380,19 @@ input {
   aspect-ratio: 1060 / 890;
   border-radius: 14px;
   background: #090909;
+}
+:root:not([data-theme="dark"]) .plants-frame {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 15%, #000 96%, transparent),
+    linear-gradient(to bottom, transparent, #000 5%, #000 82%, transparent);
+  mask-image:
+    linear-gradient(to right, transparent, #000 15%, #000 96%, transparent),
+    linear-gradient(to bottom, transparent, #000 5%, #000 82%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+:root:not([data-theme="dark"]) .plants-caption {
+  background: none;
 }
 .plants-caption {
   position: absolute;

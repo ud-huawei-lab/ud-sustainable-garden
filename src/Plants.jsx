@@ -139,36 +139,6 @@ export default function PlantsPage() {
   return (
     <section className="plants-page" aria-label="Plant size">
       <div className="plants-view">
-        <div
-          className="plants-cameras"
-          role="group"
-          aria-label="Measured camera"
-        >
-          <button className="plants-camera" aria-pressed="true">
-            <svg
-              viewBox={POTS_VIEW}
-              preserveAspectRatio="xMidYMid slice"
-              aria-hidden="true"
-            >
-              <image
-                href="/api/growth/frame"
-                width={data.frame.width}
-                height={data.frame.height}
-              />
-            </svg>
-            <span>
-              <strong>Mango & Lime</strong>
-              <small>Camera 1</small>
-            </span>
-          </button>
-          <button className="plants-camera" disabled>
-            <img src="/api/cameras/garden/snapshot" alt="" loading="lazy" />
-            <span>
-              <strong>Ghaf & Sidr</strong>
-              <small>Not measured yet</small>
-            </span>
-          </button>
-        </div>
         <figure className="plants-figure">
           <svg
             className="plants-frame"
@@ -200,6 +170,36 @@ export default function PlantsPage() {
             </InfoTip>
           </figcaption>
         </figure>
+        <div
+          className="plants-cameras"
+          role="group"
+          aria-label="Measured camera"
+        >
+          <button className="plants-camera" aria-pressed="true">
+            <svg
+              viewBox={POTS_VIEW}
+              preserveAspectRatio="xMidYMid slice"
+              aria-hidden="true"
+            >
+              <image
+                href="/api/growth/frame"
+                width={data.frame.width}
+                height={data.frame.height}
+              />
+            </svg>
+            <span>
+              <strong>Mango & Lime</strong>
+              <small>Camera 1</small>
+            </span>
+          </button>
+          <button className="plants-camera" disabled>
+            <img src="/api/cameras/garden/snapshot" alt="" loading="lazy" />
+            <span>
+              <strong>Ghaf & Sidr</strong>
+              <small>Not measured yet</small>
+            </span>
+          </button>
+        </div>
       </div>
       <div className="plants-side">
         {data.plants.map((plant) => (
