@@ -1,6 +1,18 @@
 // Sketch-based layout; elevations are illustrative rather than survey measurements.
-export const slopeBounds = { left: 4.7, right: 14.2, back: -8.5, front: 8.5 };
+export const slopeBounds = {
+  left: -10.5,
+  right: 4.7,
+  back: -17.5,
+  front: -8.5,
+};
 export function plantingHeight(x, z) {
+  const downhill = Math.max(
+    0,
+    Math.min(
+      1,
+      (slopeBounds.front - z) / (slopeBounds.front - slopeBounds.back),
+    ),
+  );
   const across = Math.max(
     0,
     Math.min(
@@ -8,14 +20,7 @@ export function plantingHeight(x, z) {
       (x - slopeBounds.left) / (slopeBounds.right - slopeBounds.left),
     ),
   );
-  const forward = Math.max(
-    0,
-    Math.min(
-      1,
-      (z - slopeBounds.back) / (slopeBounds.front - slopeBounds.back),
-    ),
-  );
-  return -0.07 - across * (1.8 + 0.25 * forward);
+  return -0.07 - downhill * (1.8 + 0.25 * across);
 }
 export const gardenTrees = [
   {
@@ -40,8 +45,8 @@ export const gardenTrees = [
   },
   {
     name: "Ghaf",
-    x: 7.1,
-    z: -5.2,
+    x: 0.2,
+    z: -10.8,
     size: 1.5,
     potted: false,
     kind: 2,
@@ -49,8 +54,8 @@ export const gardenTrees = [
   },
   {
     name: "Sidr",
-    x: 11.4,
-    z: 1.6,
+    x: 2.8,
+    z: -15.2,
     size: 1.25,
     potted: false,
     kind: 3,
@@ -62,7 +67,7 @@ export const gardenTrees = [
 }));
 const onSlope = (x, z) => [x, plantingHeight(x, z) + 0.12, z];
 export const groundIrrigationRoutes = [
-  [[2, 0.55, -4.97], [4.45, 0.2, -4.5], onSlope(5.4, -4.2), onSlope(6.4, -3.2)],
-  [onSlope(6.4, -3.2), onSlope(6.8, -4.4), onSlope(7.1, -5.2)],
-  [onSlope(6.4, -3.2), onSlope(8.6, -0.8), onSlope(11.4, 1.6)],
+  [[2, 0.55, -6.63], [2, 0.2, -8.2], onSlope(2, -9.1)],
+  [onSlope(2, -9.1), onSlope(0.6, -9.7), onSlope(0.2, -10.8)],
+  [onSlope(2, -9.1), onSlope(3.5, -12.2), onSlope(2.8, -15.2)],
 ];

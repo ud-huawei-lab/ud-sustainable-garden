@@ -169,6 +169,7 @@ export async function createApp(
                         "next_rising",
                         "next_setting",
                         "elevation",
+                        "azimuth",
                       ]
                         .filter((k) => e.attributes?.[k] !== undefined)
                         .map((k) => [k, e.attributes[k]]),

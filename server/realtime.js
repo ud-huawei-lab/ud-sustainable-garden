@@ -13,6 +13,7 @@ export function publicEntity(entity) {
         "next_rising",
         "next_setting",
         "elevation",
+        "azimuth",
       ]
         .filter((key) => entity.attributes?.[key] !== undefined)
         .map((key) => [key, entity.attributes[key]]),

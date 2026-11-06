@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { dayCycleSun } from "../shared/scene-weather.js";
 import {
   gardenTrees,
   plantingHeight,
@@ -12,7 +13,7 @@ export function createGardenScene(
   host,
   dark,
   markerElements,
-  { view = "3d" } = {},
+  { view = "3d", sunHour = 6, onSunTime = () => {} } = {},
 ) {
   const plan = view === "2d";
   const scene = new THREE.Scene();
@@ -37,10 +38,10 @@ export function createGardenScene(
   const camera = plan
     ? new THREE.OrthographicCamera(-14, 14, 12, -12, 0.1, 120)
     : new THREE.PerspectiveCamera(38, 1, 0.1, 120);
-  camera.position.set(...(plan ? [1.5, 32, 0.01] : [18, 24, 30]));
+  camera.position.set(...(plan ? [-2.9, 32, -4.49] : [18, 25, 28]));
   if (plan) camera.up.set(0, 0, -1);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(1.5, plan ? 0 : 0.3, plan ? 0 : 0.5);
+  controls.target.set(-2.9, plan ? 0 : 0.3, -4.5);
   controls.enableRotate = !plan;
   controls.minZoom = 0.5;
   controls.maxZoom = 3;
@@ -49,13 +50,12 @@ export function createGardenScene(
   controls.maxDistance = 48;
   controls.maxPolarAngle = Math.PI * 0.48;
   controls.enablePan = true;
-  scene.add(
-    new THREE.HemisphereLight(
-      dark ? 0xa9c3d4 : 0xe7f4ff,
-      0xb4a17f,
-      dark ? 1.5 : 2.3,
-    ),
+  const ambient = new THREE.HemisphereLight(
+    dark ? 0xa9c3d4 : 0xe7f4ff,
+    0xb4a17f,
+    dark ? 1.5 : 2.3,
   );
+  scene.add(ambient);
   const light = new THREE.DirectionalLight(0xfff1d5, dark ? 2 : 3.2);
   light.position.set(-9, 19, 10);
   light.castShadow = true;
@@ -65,7 +65,21 @@ export function createGardenScene(
   light.shadow.camera.top = 16;
   light.shadow.camera.bottom = -16;
   light.shadow.normalBias = 0.04;
+  light.target.position.set(-2.9, 0, -4.5);
+  scene.add(light.target);
   scene.add(light);
+  const sunDisc = new THREE.Mesh(
+    new THREE.SphereGeometry(0.55, 16, 12),
+    new THREE.MeshBasicMaterial({ color: "#ffe3a3" }),
+  );
+  sunDisc.visible = false;
+  scene.add(sunDisc);
+  let liveSun = null,
+    sunMode = "live",
+    cycleHour = sunHour,
+    lastSunTick = -1;
+  let wind = { speed: 0, direction: null },
+    windSpeed = 0;
   const materials = new Map();
   const material = (color, roughness = 0.8, metalness = 0) => {
     const key = [color, roughness, metalness].join();
@@ -114,7 +128,7 @@ export function createGardenScene(
   // The paved installation meets a descending soil bank, not a second flat platform.
   const terrain = new THREE.PlaneGeometry(
     slopeBounds.right - slopeBounds.left,
-    17,
+    slopeBounds.front - slopeBounds.back,
     36,
     40,
   );
@@ -122,7 +136,7 @@ export function createGardenScene(
   const positions = terrain.attributes.position;
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i) + (slopeBounds.left + slopeBounds.right) / 2;
-    const z = positions.getZ(i);
+    const z = positions.getZ(i) + (slopeBounds.back + slopeBounds.front) / 2;
     positions.setXYZ(i, x, plantingHeight(x, z), z);
   }
   terrain.computeVertexNormals();
@@ -154,10 +168,10 @@ export function createGardenScene(
   bank.material.bumpScale = 0.008;
   bank.material.roughness = 1;
   const edgePoints = [
-    [4.7, -8.5],
-    [14.2, -8.5],
-    [14.2, 8.5],
-    [4.7, 8.5],
+    [slopeBounds.left, slopeBounds.back],
+    [slopeBounds.right, slopeBounds.back],
+    [slopeBounds.right, slopeBounds.front],
+    [slopeBounds.left, slopeBounds.front],
   ];
   const sides = [];
   edgePoints.forEach(([ax, az], i) => {
@@ -175,7 +189,7 @@ export function createGardenScene(
   );
   bankSides.computeVertexNormals();
   mesh(bankSides, "#b09a75", 0, 0, 0);
-  box(0.12, 0.15, 17, "#aeb0a8", 4.62, -0.005, 0);
+  box(15.2, 0.15, 0.12, "#aeb0a8", -2.9, -0.005, -8.42);
   for (let z = -8; z <= 8; z += 1.2)
     box(15.1, 0.006, 0.012, "#aeb0a8", -2.9, -0.066, z);
   const dummy = new THREE.Object3D();
@@ -184,15 +198,20 @@ export function createGardenScene(
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
   };
+  const animatedTrees = [];
   function tree(x, z, size, potted = false, kind = 0, elevation = 0) {
-    const group = new THREE.Group();
-    group.position.set(x, elevation, z);
-    scene.add(group);
+    const root = new THREE.Group();
+    root.position.set(x, elevation, z);
+    scene.add(root);
     if (potted) {
-      cylinder(0.59, 0.39, 0.78, "#f0ede2", 0, 0.43, 0, group);
-      cylinder(0.51, 0.51, 0.045, "#66513a", 0, 0.84, 0, group);
+      cylinder(0.59, 0.39, 0.78, "#f0ede2", 0, 0.43, 0, root);
+      cylinder(0.51, 0.51, 0.045, "#66513a", 0, 0.84, 0, root);
     }
-    const base = potted ? 0.82 : 0;
+    const group = new THREE.Group();
+    group.position.y = potted ? 0.82 : 0;
+    root.add(group);
+    animatedTrees.push(group);
+    const base = 0;
     cylinder(
       0.055 * size,
       0.11 * size,
@@ -445,12 +464,13 @@ export function createGardenScene(
   }));
   let frame;
   let disposed = false;
+  let lastFrameTime = performance.now();
   const resize = () => {
     const { width, height } = host.getBoundingClientRect();
     renderer.setSize(width, height, false);
     const aspect = width / Math.max(1, height);
     if (plan) {
-      const halfHeight = Math.max(11, 13 / aspect);
+      const halfHeight = Math.max(15, 10 / aspect);
       camera.left = -halfHeight * aspect;
       camera.right = halfHeight * aspect;
       camera.top = halfHeight;
@@ -467,7 +487,44 @@ export function createGardenScene(
   function render() {
     if (disposed) return;
     controls.update();
-    const flowTime = performance.now() / 1000;
+    const now = performance.now();
+    const delta = Math.min(0.1, (now - lastFrameTime) / 1000);
+    lastFrameTime = now;
+    const flowTime = now / 1000;
+    if (sunMode === "running") cycleHour = (cycleHour + (delta * 24) / 90) % 24;
+    const sun = sunMode === "live" ? liveSun : dayCycleSun(cycleHour);
+    if (sun) {
+      const elevation = THREE.MathUtils.degToRad(sun.elevation);
+      const azimuth = THREE.MathUtils.degToRad(sun.azimuth);
+      const horizontal = Math.cos(elevation) * 25;
+      light.position.set(
+        -2.9 + Math.sin(azimuth) * horizontal,
+        Math.sin(elevation) * 25,
+        -4.5 - Math.cos(azimuth) * horizontal,
+      );
+      sunDisc.position.copy(light.position);
+      sunDisc.visible = sun.elevation > 0;
+      const daylight = Math.max(0, Math.sin(elevation));
+      light.intensity = (dark ? 2 : 3.2) * daylight;
+      light.color.set(sun.elevation < 15 ? "#ffb76b" : "#fff1d5");
+      ambient.intensity = (dark ? 0.65 : 1.1) + daylight * (dark ? 0.85 : 1.2);
+    }
+    if (sunMode !== "live" && Math.floor(flowTime) !== lastSunTick) {
+      lastSunTick = Math.floor(flowTime);
+      onSunTime(cycleHour);
+    }
+    windSpeed += (wind.speed - windSpeed) * (1 - Math.exp(-delta * 2));
+    const bearing = THREE.MathUtils.degToRad((wind.direction ?? 0) + 180);
+    animatedTrees.forEach((tree, index) => {
+      const sway = reducedMotion
+        ? 0
+        : Math.min(0.13, windSpeed * 0.002) *
+          (0.65 +
+            0.25 * Math.sin(flowTime * (1 + windSpeed / 30) + index * 1.7) +
+            0.1 * Math.sin(flowTime * 2.3 + index));
+      tree.rotation.z = -Math.sin(bearing) * sway;
+      tree.rotation.x = -Math.cos(bearing) * sway;
+    });
     flowRoutes.forEach(({ curve, arrows }) =>
       arrows.forEach((arrow, index) => {
         const progress = reducedMotion
@@ -507,8 +564,8 @@ export function createGardenScene(
             [0, 80],
             [-60, -25],
             [70, 5],
-            [35, -20],
-            [25, -5],
+            [30, -70],
+            [115, -110],
           ];
       const scale = Math.min(1, width / 900);
       const [offsetX, offsetY] = offsets[index];
@@ -533,6 +590,31 @@ export function createGardenScene(
   }
   render();
   return {
+    setWeather(nextWind, sun) {
+      wind = nextWind;
+      const elevation = sun?.attributes?.elevation;
+      const azimuth = sun?.attributes?.azimuth;
+      liveSun =
+        sun &&
+        !["unknown", "unavailable"].includes(sun.state) &&
+        typeof elevation === "number" &&
+        typeof azimuth === "number" &&
+        Number.isFinite(elevation) &&
+        Number.isFinite(azimuth)
+          ? { elevation, azimuth }
+          : null;
+      if (sunMode === "live" && !liveSun) {
+        light.position.set(-9, 19, 10);
+        light.intensity = dark ? 2 : 3.2;
+        light.color.set("#fff1d5");
+        ambient.intensity = dark ? 1.5 : 2.3;
+        sunDisc.visible = false;
+      }
+    },
+    setSunMode(mode) {
+      sunMode = mode;
+      lastSunTick = -1;
+    },
     setRevolving(enabled) {
       controls.autoRotate = enabled && !plan;
       controls.autoRotateSpeed = 0.55;
@@ -565,8 +647,8 @@ export function createGardenScene(
       controls.update();
     },
     reset() {
-      camera.position.set(...(plan ? [1.5, 32, 0.01] : [18, 24, 30]));
-      controls.target.set(1.5, plan ? 0 : 0.3, plan ? 0 : 0.5);
+      camera.position.set(...(plan ? [-2.9, 32, -4.49] : [18, 25, 28]));
+      controls.target.set(-2.9, plan ? 0 : 0.3, -4.5);
       if (plan) {
         camera.zoom = 1;
         camera.updateProjectionMatrix();
@@ -582,6 +664,7 @@ export function createGardenScene(
       materials.forEach((m) => m.dispose());
       parkingTextures.forEach((texture) => texture.dispose());
       sandTexture.dispose();
+      sunDisc.material.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },

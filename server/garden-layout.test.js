@@ -6,7 +6,7 @@ import {
   groundIrrigationRoutes,
   slopeBounds,
 } from "../shared/garden-layout.js";
-test("garden keeps Mango and Lemon on pavement and staggers Ghaf and Sidr on different slope levels", () => {
+test("garden keeps pots on pavement and places staggered ground trees on the slope behind the tank", () => {
   assert.deepEqual(
     gardenTrees.map((t) => t.name),
     ["Mango", "Lemon", "Ghaf", "Sidr"],
@@ -15,10 +15,14 @@ test("garden keeps Mango and Lemon on pavement and staggers Ghaf and Sidr on dif
   const [ghaf, sidr] = gardenTrees.slice(2);
   assert.ok(!ghaf.potted && !sidr.potted);
   assert.ok(ghaf.y > sidr.y + 0.5);
-  assert.ok(Math.abs(ghaf.z - sidr.z) > 4);
-  for (const tree of [ghaf, sidr])
+  assert.ok(ghaf.z - sidr.z > 4);
+  assert.ok(slopeBounds.front < -5.8, "slope begins behind the tank");
+  for (const tree of [ghaf, sidr]) {
+    assert.ok(tree.z < slopeBounds.front && tree.z > slopeBounds.back);
+    assert.ok(tree.x > slopeBounds.left && tree.x < slopeBounds.right);
     assert.equal(tree.y, plantingHeight(tree.x, tree.z));
-  assert.equal(plantingHeight(slopeBounds.left, 0), -0.07);
+  }
+  assert.equal(plantingHeight(2, slopeBounds.front), -0.07);
 });
 test("irrigation reaches both ground trees above the sloped surface", () => {
   for (const route of groundIrrigationRoutes)
