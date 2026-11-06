@@ -2825,8 +2825,74 @@ input {
   height: 100%;
 }
 .skeleton-chart {
-  height: 340px;
-  padding: 24px 0;
+  height: 286px;
+  padding: 16px 0 0;
+}
+.skeleton-plot {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 30px;
+  height: 100%;
+}
+.skeleton-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.skeleton-y .skeleton-block {
+  width: 24px;
+  height: 8px;
+}
+.skeleton-area {
+  position: relative;
+  min-width: 0;
+}
+.skeleton-grid {
+  position: absolute;
+  inset: 4px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.skeleton-grid span {
+  height: 1px;
+  background: var(--chart-line);
+}
+.skeleton-bars {
+  position: absolute;
+  inset: 4px 3% 4px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+}
+.skeleton-bars .skeleton-block {
+  width: 7%;
+  border-radius: 4px 4px 0 0;
+}
+.skeleton-line {
+  position: absolute;
+  inset: 8% 0;
+  width: 100%;
+  height: 84%;
+  animation: skeleton-pulse 1.6s ease-in-out infinite alternate;
+}
+.skeleton-line path {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.skeleton-x {
+  grid-column: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.skeleton-x .skeleton-block {
+  width: 42px;
+  height: 8px;
 }
 .skeleton-scene {
   height: calc(100dvh - 222px);
@@ -2962,7 +3028,8 @@ input {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-block {
+  .skeleton-block,
+  .skeleton-line {
     animation: none;
   }
 }
@@ -3963,11 +4030,6 @@ input {
   }
 }
 
-.water-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 14px;
-}
 .water-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3993,25 +4055,154 @@ input {
   white-space: nowrap;
   padding-inline: 14px;
 }
-.water-days {
-  margin-top: 14px;
-}
-.water-days > summary {
-  cursor: pointer;
-  font-size: 14px;
-}
 .water-days .categorical-history {
-  margin-top: 14px;
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 .water-days td,
 .water-days th {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.water-note {
-  max-width: 96ch;
-  margin-top: 14px;
+.water-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.water-head .info-tip {
+  margin-top: 3px;
+}
+.water-head .water-switch {
+  margin: 2px 0 -2px auto;
+}
+.water-switch button {
+  white-space: nowrap;
+}
+.page-water .water-switch button.selected {
+  background: rgba(255, 255, 255, 0.1);
+}
+.panel .info-tip-text {
+  top: calc(100% + 8px);
+  bottom: auto;
+  left: -8px;
+}
+.water-reading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.water-drawer-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.water-drawer-button:hover {
+  color: var(--text);
+}
+.water-chart-head {
+  gap: 12px;
+  margin-top: 26px;
+}
+.water-chart-head .water-switch {
+  margin: 2px 0 -2px;
+}
+.water-panel .chart-detail {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.water-panel .chart-tooltip {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #f5f5f5;
+}
+.water-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(760px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 22px 24px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: color-mix(in srgb, var(--base) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: -28px 0 64px rgba(0, 0, 0, 0.6);
+  color: var(--text);
+}
+:root[data-theme="dark"] .water-drawer {
+  background: rgba(20, 22, 26, 0.94);
+  box-shadow: -28px 0 64px rgba(0, 0, 0, 0.85);
+}
+.water-drawer[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.water-drawer:focus {
+  outline: none;
+}
+.water-drawer-handle {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 10px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.water-drawer-handle:hover,
+.water-drawer-handle:focus-visible {
+  outline: none;
+  box-shadow: inset 2px 0 0 var(--muted);
+}
+.water-drawer::backdrop {
+  background: rgba(0, 0, 0, 0.3);
+}
+.water-drawer header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.water-drawer h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .water-drawer[open] {
+    animation: water-drawer-in 180ms ease-out;
+  }
+}
+@keyframes water-drawer-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+@media (max-width: 960px) {
+  .page-water {
+    padding-bottom: 96px;
+  }
+  .water-drawer-handle {
+    display: none;
+  }
 }
 @media (max-width: 960px) {
   .water-grid {
@@ -4031,6 +4222,7 @@ input {
     #236b4a 66%,
     #0f4533 100%
   );
+  --base: #0c2c20;
   --surface: transparent;
   --subtle: rgba(255, 255, 255, 0.14);
   --text: #f4f8ef;
@@ -4042,23 +4234,64 @@ input {
   --shadow: none;
   color: var(--text);
 }
-:root:not([data-theme="dark"]):has(.page-plants) body {
+/* Water uses the same pattern in blue. */
+:root:not([data-theme="dark"]):has(.page-water) {
+  --page-background: linear-gradient(
+    150deg,
+    #0a2c4d 0%,
+    #114674 14%,
+    #1f6aa0 36%,
+    #135488 66%,
+    #0a2f52 100%
+  );
+  --base: #0c3558;
+  --surface: transparent;
+  --subtle: rgba(255, 255, 255, 0.14);
+  --text: #f3f8fd;
+  --muted: #d6e7f3;
+  --line: rgba(255, 255, 255, 0.24);
+  --chart-line: rgba(255, 255, 255, 0.16);
+  --chart-primary: #f3f8fd;
+  --chart-secondary: #a9d4f5;
+  --shadow: none;
+  color: var(--text);
+}
+:root[data-theme="dark"]:has(.page-water) {
+  --page-background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      rgba(55, 110, 170, 0.3),
+      transparent 55%
+    ),
+    #000;
+}
+:root:not([data-theme="dark"]):has(:is(.page-plants, .page-water)) body {
   background: transparent;
 }
-:root:not([data-theme="dark"]) .page-plants .panel {
+:root:not([data-theme="dark"]):has(:is(.page-plants, .page-water)) .chat-panel {
+  background: color-mix(in srgb, var(--base) 86%, transparent);
+}
+:root:not([data-theme="dark"]) :is(.page-plants, .page-water) .panel {
   background: linear-gradient(
     to bottom left,
     rgba(255, 255, 255, 0.16),
     rgba(255, 255, 255, 0.03) 75%
   );
 }
-:root:has(.page-plants) .chat-composer {
+:root:has(:is(.page-plants, .page-water)) .chat-composer {
   background: rgba(255, 255, 255, 0.1);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-:root[data-theme="dark"]:has(.page-plants) .chat-composer {
+:root[data-theme="dark"]:has(:is(.page-plants, .page-water)) .chat-composer {
   background: rgba(255, 255, 255, 0.05);
+}
+:root[data-theme="dark"] .page-water .panel {
+  background: linear-gradient(
+    to bottom left,
+    rgba(110, 165, 215, 0.17),
+    rgba(255, 255, 255, 0.02) 75%
+  );
 }
 :root[data-theme="dark"] .page-plants .panel {
   background: linear-gradient(
@@ -4160,20 +4393,20 @@ input {
   color: #f5f5f5;
   font-size: 13px;
 }
-.plants-info {
+.info-tip {
   position: relative;
   display: inline-flex;
   color: inherit;
   cursor: help;
 }
-.plants-info:focus {
+.info-tip:focus {
   outline: none;
 }
-.plants-info:focus-visible {
+.info-tip:focus-visible {
   outline: 2px solid #f5f5f5;
   outline-offset: 2px;
 }
-.plants-tooltip {
+.info-tip-text {
   position: absolute;
   bottom: calc(100% + 8px);
   left: -120px;
@@ -4190,8 +4423,8 @@ input {
   font-size: 12px;
   line-height: 1.5;
 }
-.plants-info:hover .plants-tooltip,
-.plants-info:focus .plants-tooltip {
+.info-tip:hover .info-tip-text,
+.info-tip:focus .info-tip-text {
   display: block;
 }
 .plants-side {
@@ -4296,7 +4529,7 @@ input {
     width: 100%;
     height: auto;
   }
-  .plants-tooltip {
+  .info-tip-text {
     left: -200px;
   }
   .plants-page {
