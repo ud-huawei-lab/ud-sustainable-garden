@@ -68,12 +68,8 @@ export function createGardenScene(
   light.target.position.set(-2.9, 0, -4.5);
   scene.add(light.target);
   scene.add(light);
-  const sunDisc = new THREE.Mesh(
-    new THREE.SphereGeometry(0.55, 16, 12),
-    new THREE.MeshBasicMaterial({ color: "#ffe3a3" }),
-  );
-  sunDisc.visible = false;
-  scene.add(sunDisc);
+  let measuredBrightness = null;
+  let sunEnabled = false;
   let liveSun = null,
     sunMode = "live",
     cycleHour = sunHour,
@@ -491,8 +487,13 @@ export function createGardenScene(
     const delta = Math.min(0.1, (now - lastFrameTime) / 1000);
     lastFrameTime = now;
     const flowTime = now / 1000;
-    if (sunMode === "running") cycleHour = (cycleHour + (delta * 24) / 90) % 24;
-    const sun = sunMode === "live" ? liveSun : dayCycleSun(cycleHour);
+    if (sunEnabled && sunMode === "running")
+      cycleHour = (cycleHour + (delta * 24) / 90) % 24;
+    const sun = sunEnabled
+      ? sunMode === "live"
+        ? liveSun
+        : dayCycleSun(cycleHour)
+      : null;
     if (sun) {
       const elevation = THREE.MathUtils.degToRad(sun.elevation);
       const azimuth = THREE.MathUtils.degToRad(sun.azimuth);
@@ -502,14 +503,35 @@ export function createGardenScene(
         Math.sin(elevation) * 25,
         -4.5 - Math.cos(azimuth) * horizontal,
       );
-      sunDisc.position.copy(light.position);
-      sunDisc.visible = sun.elevation > 0;
-      const daylight = Math.max(0, Math.sin(elevation));
-      light.intensity = (dark ? 2 : 3.2) * daylight;
       light.color.set(sun.elevation < 15 ? "#ffb76b" : "#fff1d5");
-      ambient.intensity = (dark ? 0.65 : 1.1) + daylight * (dark ? 0.85 : 1.2);
+    } else {
+      light.position.set(-9, 19, 10);
+      light.color.set("#fff1d5");
     }
-    if (sunMode !== "live" && Math.floor(flowTime) !== lastSunTick) {
+    const daylight = sun
+      ? Math.max(0, Math.sin(THREE.MathUtils.degToRad(sun.elevation)))
+      : 0.75;
+    const brightness =
+      sunMode === "live" ? (measuredBrightness ?? daylight) : daylight;
+    const directBrightness = sun && sun.elevation <= 0 ? 0 : brightness;
+    const lightingBlend = 1 - Math.exp(-delta * 2);
+    light.intensity +=
+      ((sunEnabled ? (dark ? 3 : 4.2) * directBrightness : dark ? 2.6 : 3.8) -
+        light.intensity) *
+      lightingBlend;
+    ambient.intensity +=
+      ((sunEnabled
+        ? (dark ? 1.05 : 1.4) + brightness * (dark ? 1.2 : 1.4)
+        : dark
+          ? 1.9
+          : 2.7) -
+        ambient.intensity) *
+      lightingBlend;
+    if (
+      sunEnabled &&
+      sunMode !== "live" &&
+      Math.floor(flowTime) !== lastSunTick
+    ) {
       lastSunTick = Math.floor(flowTime);
       onSunTime(cycleHour);
     }
@@ -590,8 +612,12 @@ export function createGardenScene(
   }
   render();
   return {
-    setWeather(nextWind, sun) {
+    setSunEnabled(enabled) {
+      sunEnabled = enabled;
+    },
+    setWeather(nextWind, sun, brightness = null) {
       wind = nextWind;
+      measuredBrightness = brightness;
       const elevation = sun?.attributes?.elevation;
       const azimuth = sun?.attributes?.azimuth;
       liveSun =
@@ -603,13 +629,6 @@ export function createGardenScene(
         Number.isFinite(azimuth)
           ? { elevation, azimuth }
           : null;
-      if (sunMode === "live" && !liveSun) {
-        light.position.set(-9, 19, 10);
-        light.intensity = dark ? 2 : 3.2;
-        light.color.set("#fff1d5");
-        ambient.intensity = dark ? 1.5 : 2.3;
-        sunDisc.visible = false;
-      }
     },
     setSunMode(mode) {
       sunMode = mode;
@@ -664,7 +683,6 @@ export function createGardenScene(
       materials.forEach((m) => m.dispose());
       parkingTextures.forEach((texture) => texture.dispose());
       sandTexture.dispose();
-      sunDisc.material.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },

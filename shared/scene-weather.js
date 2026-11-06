@@ -21,6 +21,20 @@ export function sceneWind(speedEntity, directionEntity) {
   };
 }
 
+// Compress the daylight range for screen rendering; zero remains genuine darkness.
+export function sceneBrightness(illuminance, irradiance) {
+  const lux = numeric(illuminance?.state);
+  const luxFactor = { lx: 1, lux: 1, klx: 1000 }[
+    illuminance?.attributes?.unit_of_measurement || "lx"
+  ];
+  if (lux != null && lux >= 0 && luxFactor != null)
+    return Math.sqrt(Math.min(1, (lux * luxFactor) / 100000));
+  const watts = numeric(irradiance?.state);
+  return watts != null && watts >= 0
+    ? Math.sqrt(Math.min(1, watts / 1000))
+    : null;
+}
+
 // A visual day cycle, not a surveyed solar/shadow study. Live mode uses HA angles.
 export function dayCycleSun(hour) {
   const phase = ((((hour % 24) + 24) % 24) - 6) / 12;
