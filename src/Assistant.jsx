@@ -130,7 +130,7 @@ export default function Assistant() {
   };
   return (
     <section className="garden-chat" aria-label="Garden assistant">
-      {(open || error) && (
+      {open && (
         <div className="chat-panel">
           <header>
             <span>
@@ -400,7 +400,7 @@ export default function Assistant() {
           >
             <SendHorizontal size={18} />
           </button>
-          {messages.length > 0 && !open && (
+          {(messages.length > 0 || error) && !open && (
             <button
               className="icon-button"
               type="button"

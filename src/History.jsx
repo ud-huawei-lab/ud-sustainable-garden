@@ -9,7 +9,14 @@ const colors = ["var(--chart-primary)", "var(--chart-secondary)"];
 const localInput = (value) =>
   new Date(value + 4 * 3600000).toISOString().slice(0, 16);
 
-function Chart({ data, metric }) {
+const dateOnly = {
+  day: "numeric",
+  month: "short",
+  hour: undefined,
+  minute: undefined,
+};
+
+export function Chart({ data, metric }) {
   const [hover, setHover] = useState(null);
   const [pointer, setPointer] = useState(null);
   const container = useRef(null);
@@ -37,7 +44,12 @@ function Chart({ data, metric }) {
     (high - low) * 0.15,
     high === low ? Math.max(Math.abs(high) * 0.03, 1) : 0.05,
   );
-  const min = metric.bars ? 0 : metric.scatter ? 0 : low - pad;
+  const min =
+    metric.bars || metric.scatter
+      ? 0
+      : metric.nonNegative
+        ? Math.max(0, low - pad)
+        : low - pad;
   const max = metric.scatter ? 360 : high + pad;
   const chartWidth = width - 68;
   const x = (t) =>
@@ -74,6 +86,20 @@ function Chart({ data, metric }) {
           ),
         }));
   const ticks = width < 500 ? 3 : 6;
+  const hoverLabel = metric.daily
+    ? dateOnly
+    : { day: "numeric", month: "short" };
+  const dayTimes = metric.daily ? data.series[0].points.map((p) => p.time) : [];
+  const dayStep = Math.max(
+    1,
+    Math.ceil(dayTimes.length / (width < 500 ? 4 : 8)),
+  );
+  const barWidth = metric.daily
+    ? Math.min(
+        44,
+        Math.max(4, (0.6 * chartWidth * 86400000) / (data.end - data.start)),
+      )
+    : 4;
   return (
     <div ref={container} className="chart-wrap">
       <svg
@@ -146,27 +172,41 @@ function Chart({ data, metric }) {
             </g>
           );
         })}
-        {Array.from({ length: ticks }, (_, i) => {
-          const t = data.start + ((data.end - data.start) * i) / (ticks - 1);
-          return (
+        {dayTimes
+          .filter((_, i) => i % dayStep === 0)
+          .map((t) => (
             <text
-              key={i}
+              key={t}
               className="chart-label"
               x={x(t)}
               y="272"
-              textAnchor={
-                i === 0 ? "start" : i === ticks - 1 ? "end" : "middle"
-              }
+              textAnchor="middle"
             >
-              {time(
-                t,
-                data.end - data.start > 2 * 86400000
-                  ? { day: "numeric", month: "short" }
-                  : {},
-              )}
+              {time(t, dateOnly)}
             </text>
-          );
-        })}
+          ))}
+        {!metric.daily &&
+          Array.from({ length: ticks }, (_, i) => {
+            const t = data.start + ((data.end - data.start) * i) / (ticks - 1);
+            return (
+              <text
+                key={i}
+                className="chart-label"
+                x={x(t)}
+                y="272"
+                textAnchor={
+                  i === 0 ? "start" : i === ticks - 1 ? "end" : "middle"
+                }
+              >
+                {time(
+                  t,
+                  data.end - data.start > 2 * 86400000
+                    ? { day: "numeric", month: "short" }
+                    : {},
+                )}
+              </text>
+            );
+          })}
         {data.series.map((s, index) => (
           <g key={s.name}>
             {metric.bars ? (
@@ -175,9 +215,9 @@ function Chart({ data, metric }) {
                 .map((p, i) => (
                   <rect
                     key={i}
-                    x={x(p.time) - 2}
+                    x={x(p.time) - barWidth / 2}
                     y={y(p.value)}
-                    width="4"
+                    width={barWidth}
                     height={Math.max(0, y(0) - y(p.value))}
                     fill={colors[index]}
                   />
@@ -229,7 +269,7 @@ function Chart({ data, metric }) {
             transform: pointer.y > 130 ? "translateY(-100%)" : undefined,
           }}
         >
-          <span>{time(hoverTime, { day: "numeric", month: "short" })}</span>
+          <span>{time(hoverTime, hoverLabel)}</span>
           {sample.map((s) => (
             <div key={s.name}>
               <span>{s.name}</span>
@@ -242,13 +282,15 @@ function Chart({ data, metric }) {
       )}
       <div className="chart-detail" aria-live="polite">
         {hoverTime == null ? (
-          <span>
-            Hover over the chart to explore readings, or focus it and use the
-            arrow keys.
-          </span>
+          metric.quiet ? null : (
+            <span>
+              Hover over the chart to explore readings, or focus it and use the
+              arrow keys.
+            </span>
+          )
         ) : (
           <>
-            <span>{time(hoverTime, { day: "numeric", month: "short" })}</span>
+            <span>{time(hoverTime, hoverLabel)}</span>
             {sample.map((s, i) => (
               <span key={s.name} style={{ color: colors[i] }}>
                 {s.name} {format(s.point?.value)} {metric.unit}

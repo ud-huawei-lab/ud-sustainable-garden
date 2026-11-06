@@ -148,7 +148,7 @@ export default function Auth() {
     };
   }, []);
   useEffect(() => {
-    if (!session) return;
+    if (!session || session.local) return;
     const timer = setTimeout(
       () => {
         checkRequest.current?.abort();
@@ -215,7 +215,7 @@ export default function Auth() {
   if (!session) return <Login onSignIn={signIn} connectionError={error} />;
   return (
     <>
-      <App onSignOut={signOut} signingOut={signingOut} />
+      <App onSignOut={session.local ? null : signOut} signingOut={signingOut} />
       {error && (
         <p className="auth-notice" role="alert">
           {error}

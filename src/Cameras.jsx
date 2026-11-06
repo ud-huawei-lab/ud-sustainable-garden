@@ -14,8 +14,11 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Ruler,
 } from "lucide-react";
 import { cameras } from "../shared/catalog.js";
+import GrowthMarks from "./GrowthMarks.jsx";
+import { useGrowth } from "./Plants.jsx";
 import Skeleton from "./Skeleton.jsx";
 
 export function LivePlayer({ camera }) {
@@ -36,6 +39,10 @@ export function LivePlayer({ camera }) {
   const [directionOpen, setDirectionOpen] = useState(false);
   const [moving, setMoving] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [showMarks, setShowMarks] = useState(false);
+  const [videoSize, setVideoSize] = useState(null);
+  const measured = camera.id === "trees";
+  const growth = useGrowth(showMarks);
   const closeDirection = () => {
     setDirectionOpen(false);
     requestAnimationFrame(() => directionToggle.current?.focus());
@@ -62,7 +69,11 @@ export function LivePlayer({ camera }) {
   }, []);
   const changeDirection = async (direction) => {
     if (moving && direction !== "stop") return;
-    if (direction !== "stop") setMoving(true);
+    if (direction !== "stop") {
+      setMoving(true);
+      // Saved boxes only fit the saved view.
+      setShowMarks(false);
+    }
     setExpandError("");
     try {
       const response = await fetch(`/api/cameras/${camera.id}/ptz`, {
@@ -210,6 +221,9 @@ export function LivePlayer({ camera }) {
         muted={muted}
         playsInline
         aria-label={`${camera.name} live feed`}
+        onLoadedMetadata={(event) =>
+          setVideoSize([event.target.videoWidth, event.target.videoHeight])
+        }
         onWaiting={() => setBuffering(true)}
         onStalled={() => setBuffering(true)}
         onPlay={() => setPaused(false)}
@@ -218,6 +232,20 @@ export function LivePlayer({ camera }) {
           setBuffering(false);
         }}
       />
+      {showMarks && growth.data && videoSize && (
+        <svg
+          className="feed-marks"
+          viewBox={`0 0 ${videoSize[0]} ${videoSize[1]}`}
+          aria-label="Last night's plant measurements"
+          role="img"
+        >
+          <g
+            transform={`scale(${videoSize[0] / growth.data.frame.width} ${videoSize[1] / growth.data.frame.height})`}
+          >
+            <GrowthMarks plants={growth.data.plants} labelSize={44} />
+          </g>
+        </svg>
+      )}
       {!playing && !error && (
         <Skeleton kind="camera" label={`Loading ${camera.name}`} />
       )}
@@ -303,6 +331,17 @@ export function LivePlayer({ camera }) {
               <span>{Math.round((muted ? 0 : volume) * 100)}%</span>
             </div>
           </div>
+          {measured && (
+            <button
+              aria-label="Show plant measurements"
+              aria-pressed={showMarks}
+              title="Plant measurements"
+              className={showMarks ? "selected" : ""}
+              onClick={() => setShowMarks((value) => !value)}
+            >
+              <Ruler size={16} />
+            </button>
+          )}
           <button
             className="feed-live"
             aria-label={`Return ${camera.name} to live`}
@@ -389,9 +428,9 @@ export function LivePlayer({ camera }) {
           <time title="Current time in Dubai">{clock}</time>
         </div>
       </div>
-      {expandError && (
+      {(expandError || (showMarks && growth.error)) && (
         <span className="feed-notice" role="status">
-          {expandError}
+          {expandError || growth.error}
         </span>
       )}
     </article>

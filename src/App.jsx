@@ -8,6 +8,8 @@ import {
   X,
   Columns3,
   LogOut,
+  Droplets,
+  Sprout,
 } from "lucide-react";
 import { useReadings } from "./data.js";
 import { Headline, Solar, WindPanel, RainPanel, AirPanel } from "./Weather.jsx";
@@ -16,9 +18,13 @@ import Cameras from "./Cameras.jsx";
 import ReadingPage from "./Sensors.jsx";
 import Skeleton from "./Skeleton.jsx";
 import Assistant from "./Assistant.jsx";
+import WaterPage from "./Water.jsx";
+import PlantsPage from "./Plants.jsx";
 const Home = lazy(() => import("./Home.jsx"));
 const pages = {
   home: "Digital garden",
+  water: "Air moisture & plant demand",
+  plants: "Plant size",
   overview: "Current readings",
   readings: "Reading & history",
   cameras: "Garden CCTV",
@@ -87,6 +93,8 @@ export default function App({ onSignOut, signingOut }) {
         <nav aria-label="Main navigation">
           {[
             ["home", "Home", Box],
+            ["water", "Water", Droplets],
+            ["plants", "Plants", Sprout],
             ["overview", "Overview", LayoutGrid],
             ["readings", "Reading", Columns3],
             ["cameras", "CCTV", Cctv],
@@ -103,15 +111,17 @@ export default function App({ onSignOut, signingOut }) {
           ))}
         </nav>
         <div className="header-actions">
-          <button
-            className="icon-button"
-            onClick={onSignOut}
-            disabled={signingOut}
-            aria-label={signingOut ? "Signing out" : "Sign out"}
-            title="Sign out"
-          >
-            <LogOut size={18} strokeWidth={1.5} />
-          </button>
+          {onSignOut && (
+            <button
+              className="icon-button"
+              onClick={onSignOut}
+              disabled={signingOut}
+              aria-label={signingOut ? "Signing out" : "Sign out"}
+              title="Sign out"
+            >
+              <LogOut size={18} strokeWidth={1.5} />
+            </button>
+          )}
           <button
             className="icon-button theme-button"
             onClick={() => setDark((v) => !v)}
@@ -122,7 +132,7 @@ export default function App({ onSignOut, signingOut }) {
         </div>
       </header>
       <main id="page-content" tabIndex={-1} className={`page-${page}`}>
-        <div className="page-intro">
+        <div className={`page-intro${page === "plants" ? " hidden-intro" : ""}`}>
           <h1>
             Sustainable Garden{" "}
             <span className="page-name">/ {pages[page]}</span>
@@ -148,6 +158,10 @@ export default function App({ onSignOut, signingOut }) {
             />
           </Suspense>
         )}
+        {page === "water" && (
+          <WaterPage entities={data.entities} onHistory={showHistory} />
+        )}
+        {page === "plants" && <PlantsPage />}
         {page === "overview" && !data.fetchedAt && !data.error ? (
           <Skeleton kind="overview" />
         ) : (
@@ -171,7 +185,7 @@ export default function App({ onSignOut, signingOut }) {
           )
         )}
         {page === "cameras" && <Cameras />}
-        {page !== "home" && (
+        {page !== "home" && page !== "plants" && (
           <footer className="page-footer">
             <span>University of Dubai · Sustainable Garden</span>
             <span>All times in Dubai · UTC+4</span>

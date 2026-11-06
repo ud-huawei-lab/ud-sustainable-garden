@@ -32,3 +32,22 @@ Tests:
 ```sh
 python -m unittest discover -s bridge -p '*_test.py'
 ```
+
+## Plant measurements
+
+`garden_growth.py` runs on the DGX as the `jetson` user. It is separate from the vision gateway and reuses that gateway's Home Assistant login from `~/.config/ud-garden-vision/config.json`.
+
+Installed paths:
+- `~/garden_growth_C42/`: the script, its `.venv`, `reference.jpg`, `latest.json`, `history.json` and one JSON and JPEG per night in `nights/`
+- `~/.config/garden_growth_C42/config.json`: data service token, mode 0600
+- `~/.config/systemd/user/garden-growth-measure_C42.timer`: runs the job at 02:00 Dubai time
+- `~/.config/systemd/user/garden-growth-data_C42.service`: read-only data on `127.0.0.1:8771`
+
+The data service serves only `/latest.json`, `/history.json` and `/frame.jpg`, and requires the token. Locally, open a tunnel with `ssh -f -N -L 8771:127.0.0.1:8771 dgx`. A deployed site needs its own HTTPS route to this service.
+
+Calibration values in `PLANTS` belong to the Camera 1 guard position. If the camera or pots move, update them and delete `reference.jpg`, so that the next night saves a new reference. The job uses the guard position because Home Assistant's pan and tilt sensors did not change when the camera moved.
+
+```sh
+systemctl --user start garden-growth-measure_C42.service
+journalctl --user -u garden-growth-measure_C42 --since today
+```

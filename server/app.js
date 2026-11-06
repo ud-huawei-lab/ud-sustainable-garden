@@ -5,16 +5,18 @@ import { RealtimeReadings } from "./realtime.js";
 import { mediaPath, rewritePlaylist } from "./media.js";
 import { historyRange } from "./data.js";
 import { history } from "./history.js";
-import { createAuth } from "./auth.js";
+import { waterInsights, waterRanges } from "./water.js";
+import { createAuth, createLocalAccess, skipsSignIn } from "./auth.js";
 import { memoryStore } from "./store.js";
 import { createTickets } from "./tickets.js";
 import { createVisionRouter } from "./vision.js";
 import { createCameraControlsRouter } from "./camera-controls.js";
+import { createGrowthRouter } from "./growth.js";
 import { allowedEntities, cameras, metrics } from "../shared/catalog.js";
 
 export async function createApp(
   env = process.env,
-  { serverless = false, store: suppliedStore } = {},
+  { serverless = false, store: suppliedStore, devMode = false } = {},
 ) {
   const host = env.HOST || "127.0.0.1";
   const port = Number(env.PORT || 5173);
@@ -45,16 +47,18 @@ export async function createApp(
     origins.push(new URL(`https://${env.VERCEL_URL}`).origin);
   const store = suppliedStore || memoryStore();
   const tickets = serverless ? createTickets(env.APP_SESSION_SECRET) : null;
-  const auth = createAuth(
-    {
-      username: env.APP_USERNAME,
-      passwordHash: env.APP_PASSWORD_HASH,
-      origins,
-      secure: Boolean(publicOrigin),
-      partitioned: Boolean(publicOrigin),
-    },
-    { store, tickets },
-  );
+  const auth = skipsSignIn({ devMode, serverless, publicOrigin, host })
+    ? createLocalAccess({ origins })
+    : createAuth(
+        {
+          username: env.APP_USERNAME,
+          passwordHash: env.APP_PASSWORD_HASH,
+          origins,
+          secure: Boolean(publicOrigin),
+          partitioned: Boolean(publicOrigin),
+        },
+        { store, tickets },
+      );
   const app = express();
   app.disable("x-powered-by");
   if (serverless) app.set("trust proxy", 1);
@@ -68,6 +72,7 @@ export async function createApp(
   const ha = new HomeAssistant(env);
   const cache = new Map();
   const snapshots = new Map();
+  const waterCache = new Map();
   let statesCache = { at: 0, data: null };
   let statesPromise;
   const realtime = new RealtimeReadings(ha, (snapshot) => {
@@ -215,6 +220,17 @@ export async function createApp(
     cache.set(key, { at: Date.now(), data });
     res.json(data);
   });
+  app.get("/api/water", async (req, res) => {
+    const range = req.query.range || "7d";
+    if (!waterRanges.includes(range))
+      return res.status(400).json({ error: "Choose a supported water range." });
+    const cached = waterCache.get(range);
+    if (cached && Date.now() - cached.at < 300000) return res.json(cached.data);
+    const data = await waterInsights(ha, range);
+    waterCache.set(range, { at: Date.now(), data });
+    res.json(data);
+  });
+  app.use("/api/growth", createGrowthRouter(env));
   const cameraFor = (id) => cameras.find((c) => c.id === id);
   const streamUrl = (id, stream) =>
     `/api/video/${id}/${tickets ? tickets.seal("camera", { ...stream, id }, Math.max(1, stream.expires - Date.now())) + "/" : ""}${new URL(stream.playlist).pathname.split("/").pop()}`;
