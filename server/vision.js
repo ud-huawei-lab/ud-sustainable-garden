@@ -45,12 +45,15 @@ export function createVisionRouter(env, { fetchImpl = fetch } = {}) {
       if (path === "/models") {
         if (!Array.isArray(result.models)) throw new Error();
         return res.json({
-          models: result.models.slice(0, 40).map((m) => ({
-            name: String(m.name).slice(0, 120),
-            sizeBytes: m.sizeBytes,
-            vision: m.vision === true,
-            maxContext: m.maxContext,
-          })),
+          models: result.models
+            .filter((m) => m.vision === true)
+            .slice(0, 40)
+            .map((m) => ({
+              name: String(m.name).slice(0, 120),
+              sizeBytes: m.sizeBytes,
+              vision: m.vision === true,
+              maxContext: m.maxContext,
+            })),
           defaultModel: result.defaultModel,
           contextWindow: result.contextWindow,
         });

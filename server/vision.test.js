@@ -30,6 +30,31 @@ const post = (base, body) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+
+test("model picker receives only installed vision models", async (t) => {
+  const base = await setup(t, env, async () =>
+    Response.json({
+      models: [
+        { name: "text-model", vision: false, sizeBytes: 100, maxContext: 8192 },
+        {
+          name: "gemma4:12b",
+          vision: true,
+          sizeBytes: 7556508396,
+          maxContext: 262144,
+        },
+      ],
+      defaultModel: "gemma4:12b",
+      contextWindow: 32768,
+    }),
+  );
+  const response = await fetch(base + "/models");
+  const data = await response.json();
+  assert.deepEqual(
+    data.models.map((m) => m.name),
+    ["gemma4:12b"],
+  );
+  assert.equal(data.contextWindow, 32768);
+});
 test("vision rejects unconfigured and unsafe bridge URLs", async (t) => {
   for (const bad of [
     {},
