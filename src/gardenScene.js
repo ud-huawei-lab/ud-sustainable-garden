@@ -564,8 +564,8 @@ export function createGardenScene(
             [0, 80],
             [-60, -25],
             [70, 5],
-            [35, -20],
-            [25, -5],
+            [30, -70],
+            [115, -110],
           ];
       const scale = Math.min(1, width / 900);
       const [offsetX, offsetY] = offsets[index];

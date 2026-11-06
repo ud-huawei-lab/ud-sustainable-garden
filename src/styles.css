@@ -3116,7 +3116,7 @@ input {
   position: absolute;
   right: 0;
   top: 46px;
-  width: 190px;
+  width: 222px;
   padding: 12px;
   background: var(--base);
   border: 1px solid var(--line);
@@ -3808,8 +3808,11 @@ input {
   justify-content: space-between;
   min-height: 26px;
   font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  white-space: nowrap;
 }
 .scene-sun-detail button {
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   color: var(--text);
