@@ -103,15 +103,17 @@ export default function App({ onSignOut, signingOut }) {
           ))}
         </nav>
         <div className="header-actions">
-          <button
-            className="icon-button"
-            onClick={onSignOut}
-            disabled={signingOut}
-            aria-label={signingOut ? "Signing out" : "Sign out"}
-            title="Sign out"
-          >
-            <LogOut size={18} strokeWidth={1.5} />
-          </button>
+          {onSignOut && (
+            <button
+              className="icon-button"
+              onClick={onSignOut}
+              disabled={signingOut}
+              aria-label={signingOut ? "Signing out" : "Sign out"}
+              title="Sign out"
+            >
+              <LogOut size={18} strokeWidth={1.5} />
+            </button>
+          )}
           <button
             className="icon-button theme-button"
             onClick={() => setDark((v) => !v)}

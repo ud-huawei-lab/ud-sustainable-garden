@@ -13,7 +13,7 @@ npm run build
 npm start
 ```
 
-Open http://127.0.0.1:5173 and sign in. For development with hot reload, use `npm run dev` instead of `npm start`. Run one server at a time. The setup command hides password input and saves a salted scrypt hash; it never saves the dashboard password itself. To change credentials, run it again and restart the server, which also invalidates existing sessions.
+Open http://127.0.0.1:5173 and sign in. For development with hot reload, use `npm run dev` instead of `npm start`. `npm run dev` on a loopback address skips sign-in and hides Sign out; the deployed site and `npm start` always ask for it. Run one server at a time. The setup command hides password input and saves a salted scrypt hash; it never saves the dashboard password itself. To change credentials, run it again and restart the server, which also invalidates existing sessions.
 
 ## Pages
 

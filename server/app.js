@@ -5,7 +5,7 @@ import { RealtimeReadings } from "./realtime.js";
 import { mediaPath, rewritePlaylist } from "./media.js";
 import { historyRange } from "./data.js";
 import { history } from "./history.js";
-import { createAuth } from "./auth.js";
+import { createAuth, createLocalAccess, skipsSignIn } from "./auth.js";
 import { memoryStore } from "./store.js";
 import { createTickets } from "./tickets.js";
 import { createVisionRouter } from "./vision.js";
@@ -14,7 +14,7 @@ import { allowedEntities, cameras, metrics } from "../shared/catalog.js";
 
 export async function createApp(
   env = process.env,
-  { serverless = false, store: suppliedStore } = {},
+  { serverless = false, store: suppliedStore, devMode = false } = {},
 ) {
   const host = env.HOST || "127.0.0.1";
   const port = Number(env.PORT || 5173);
@@ -45,16 +45,18 @@ export async function createApp(
     origins.push(new URL(`https://${env.VERCEL_URL}`).origin);
   const store = suppliedStore || memoryStore();
   const tickets = serverless ? createTickets(env.APP_SESSION_SECRET) : null;
-  const auth = createAuth(
-    {
-      username: env.APP_USERNAME,
-      passwordHash: env.APP_PASSWORD_HASH,
-      origins,
-      secure: Boolean(publicOrigin),
-      partitioned: Boolean(publicOrigin),
-    },
-    { store, tickets },
-  );
+  const auth = skipsSignIn({ devMode, serverless, publicOrigin, host })
+    ? createLocalAccess({ origins })
+    : createAuth(
+        {
+          username: env.APP_USERNAME,
+          passwordHash: env.APP_PASSWORD_HASH,
+          origins,
+          secure: Boolean(publicOrigin),
+          partitioned: Boolean(publicOrigin),
+        },
+        { store, tickets },
+      );
   const app = express();
   app.disable("x-powered-by");
   if (serverless) app.set("trust proxy", 1);

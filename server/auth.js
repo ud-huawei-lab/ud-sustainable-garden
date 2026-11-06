@@ -20,6 +20,48 @@ export async function hashPassword(password) {
   return `scrypt-v1$${salt}$${key.toString("hex")}`;
 }
 
+// `npm run dev` on this machine opens without sign-in. A deployment never does:
+// not on Vercel, not with a public origin, not on a non-loopback address, and
+// not under `npm start`, which keeps sign-in so the real flow can be tested.
+export function skipsSignIn({ devMode, serverless, publicOrigin, host }) {
+  return Boolean(
+    devMode &&
+    !serverless &&
+    !publicOrigin &&
+    ["127.0.0.1", "localhost", "::1"].includes(host),
+  );
+}
+
+export function createLocalAccess({ origins = [] } = {}) {
+  const allowed = new Set(origins);
+  const crossSite = (req) =>
+    req.headers["sec-fetch-site"] === "cross-site" ||
+    (req.headers.origin && !allowed.has(req.headers.origin));
+  const router = express.Router();
+  router.use((req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    if (crossSite(req))
+      return res.status(403).json({ error: "This request is not allowed." });
+    next();
+  });
+  router.get("/session", (req, res) =>
+    res.json({ user: "local", local: true }),
+  );
+  router.use((req, res) =>
+    res.status(404).json({ error: "This endpoint is not available." }),
+  );
+  return {
+    router,
+    requireSession(req, res, next) {
+      if (crossSite(req))
+        return res.status(403).json({ error: "This request is not allowed." });
+      next();
+    },
+    onSessionEnd: () => () => {},
+    async close() {},
+  };
+}
+
 // One configured account, opaque server-side sessions, and no browser-readable tokens.
 export function createAuth(
   {

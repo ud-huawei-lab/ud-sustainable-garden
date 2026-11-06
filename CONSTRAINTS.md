@@ -5,7 +5,7 @@
 - AI UI only; disabled input, no model/agent calls.
 - Credentials stay in ignored environment configuration and server memory.
 - Read-only HA endpoints, allowlisted entity IDs, history range at most 31 days.
-- Localhost binding by default; remote binding requires application authentication.
+- Localhost binding by default; remote binding requires application authentication. Only `npm run dev` on loopback skips sign-in.
 - Dubai time for all user-facing timestamps and date-range inputs.
 - Desktop and narrow mobile layouts must render without horizontal overflow.
 - Automated boundary tests and production build must pass; document upstream limits.
