@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Cctv, ChevronDown, SendHorizontal, RotateCcw } from "lucide-react";
+import {
+  Cctv,
+  ChevronDown,
+  SendHorizontal,
+  RotateCcw,
+  Check,
+} from "lucide-react";
 import { cameras } from "../shared/catalog.js";
 import Skeleton from "./Skeleton.jsx";
 import { time } from "./data.js";
@@ -11,6 +17,7 @@ export default function Assistant() {
   const scrollBox = useRef(null);
   const follow = useRef(true);
   const request = useRef(null);
+  const modelMenu = useRef(null);
   const [models, setModels] = useState([]);
   const [model, setModel] = useState("");
   const [windowSize, setWindowSize] = useState(32768);
@@ -37,7 +44,16 @@ export default function Assistant() {
         return data;
       })
       .then((data) => {
-        setModels(data.models);
+        setModels(
+          data.models
+            .filter((m) => m.vision)
+            .sort(
+              (a, b) =>
+                Number(b.name === data.defaultModel) -
+                  Number(a.name === data.defaultModel) ||
+                a.name.localeCompare(b.name),
+            ),
+        );
         setWindowSize(data.contextWindow);
         setModel(
           data.models.find((m) => m.name === data.defaultModel && m.vision)
@@ -70,6 +86,7 @@ export default function Assistant() {
   const analyze = async (event) => {
     event.preventDefault();
     if (busy || !model) return;
+    if (modelMenu.current) modelMenu.current.open = false;
     const prompt =
       question.trim() ||
       "Describe what you can see and any clear changes between the frames.";
@@ -217,67 +234,85 @@ export default function Assistant() {
             onChange={(event) => setQuestion(event.target.value)}
             placeholder="Ask the garden"
             rows={1}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                event.currentTarget.form.requestSubmit();
+              }
+            }}
           />
         </div>
         <div className="chat-options">
-          <select
-            aria-label="AI model"
-            title="Vision model"
-            value={model}
-            disabled={busy || loading || !models.length}
-            onChange={(event) => {
-              setModel(event.target.value);
-              reset();
-            }}
-          >
-            {loading && <option>Loading models…</option>}
-            {models.map((m) => (
-              <option value={m.name} key={m.name} disabled={!m.vision}>
-                {m.name} · {(m.sizeBytes / 1e9).toFixed(1)} GB
-                {!m.vision ? " · text only" : ""}
-              </option>
-            ))}
-          </select>
-          <details className="chat-settings">
+          <details ref={modelMenu} className="chat-model-menu">
             <summary
-              aria-label="Camera and model settings"
-              title="Camera and model settings"
+              aria-label="Choose vision model"
+              title={model || "Choose vision model"}
+              onClick={(event) => {
+                if (busy || loading) event.preventDefault();
+              }}
             >
+              <span>{loading ? "Loading…" : model || "Select model"}</span>
+              <ChevronDown size={12} />
+            </summary>
+            <div className="chat-model-popover">
+              <p>Vision models</p>
+              <ul>
+                {models.map((m) => (
+                  <li key={m.name}>
+                    <button
+                      type="button"
+                      aria-label={"Use " + m.name}
+                      aria-pressed={model === m.name}
+                      disabled={busy}
+                      onClick={() => {
+                        setModel(m.name);
+                        reset();
+                        modelMenu.current.open = false;
+                      }}
+                    >
+                      <span>
+                        <strong>{m.name}</strong>
+                        <small>
+                          {(m.sizeBytes / 1e9).toFixed(1)} GB ·{" "}
+                          {count(m.maxContext)} tokens max
+                        </small>
+                      </span>
+                      {model === m.name && <Check size={14} />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+          <details className="chat-settings">
+            <summary aria-label="Choose camera" title="Choose camera">
               <Cctv size={16} />
             </summary>
             <div className="chat-settings-popover">
-              <label>
-                Camera
-                <select
-                  value={camera}
-                  disabled={busy}
-                  onChange={(event) => {
-                    setCamera(event.target.value);
-                    reset();
-                  }}
-                >
-                  {cameras.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <details className="assistant-models">
-                <summary>Installed models · {models.length}</summary>
-                <ul>
-                  {models.map((m) => (
-                    <li key={m.name}>
-                      <strong>{m.name}</strong>
-                      <span>
-                        {(m.sizeBytes / 1e9).toFixed(1)} GB ·{" "}
-                        {count(m.maxContext)} tokens ·{" "}
-                        {m.vision ? "Vision" : "Text only"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
+              <p className="chat-menu-heading">Camera</p>
+              <div className="camera-choices">
+                {cameras.map((c) => (
+                  <button
+                    type="button"
+                    key={c.id}
+                    disabled={busy}
+                    aria-label={"Use camera " + c.name}
+                    aria-pressed={camera === c.id}
+                    onClick={(event) => {
+                      setCamera(c.id);
+                      reset();
+                      event.currentTarget.closest("details").open = false;
+                    }}
+                  >
+                    <span>{c.name}</span>
+                    {camera === c.id && <Check size={14} />}
+                  </button>
+                ))}
+              </div>
               <p>Uses three recent frames.</p>
             </div>
           </details>

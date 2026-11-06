@@ -22,7 +22,7 @@ To disable only this gateway's internet route:
 sudo tailscale funnel --https=8443 off
 ```
 
-The UI defaults to `gemma4:12b`, lists all installed models, and disables text-only models for camera questions. Each analysis captures three chronological frames one second apart and uses up to the last three conversation exchanges. Images and inference context are held in memory, not saved to files. The model can stay resident in Ollama for ten minutes to avoid repeated cold loading. Voice and equipment control are not enabled.
+The UI defaults to `gemma4:12b`, lists installed vision models only. Each analysis captures three chronological frames one second apart and uses up to the last three conversation exchanges. Images and inference context are held in memory, not saved to files. The model can stay resident in Ollama for ten minutes to avoid repeated cold loading. Voice and equipment control are not enabled.
 
 Requests explicitly set `think: false` and `num_ctx: 32768`; no global Ollama settings are changed. The context indicator uses Ollama's returned `prompt_eval_count` and `eval_count`, not an estimate, and separately lists each model's maximum context and file size. The inference time comes from Ollama's `total_duration` and excludes capture/network time. Larger context allocation does not mean every request fills the entire window.
 
