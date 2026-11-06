@@ -14,7 +14,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Square,
 } from "lucide-react";
 import { cameras } from "../shared/catalog.js";
 import Skeleton from "./Skeleton.jsx";
@@ -22,6 +21,7 @@ import Skeleton from "./Skeleton.jsx";
 export function LivePlayer({ camera }) {
   const video = useRef(null);
   const container = useRef(null);
+  const directionToggle = useRef(null);
   const liveEngine = useRef(null);
   const [error, setError] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -36,6 +36,10 @@ export function LivePlayer({ camera }) {
   const [directionOpen, setDirectionOpen] = useState(false);
   const [moving, setMoving] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const closeDirection = () => {
+    setDirectionOpen(false);
+    requestAnimationFrame(() => directionToggle.current?.focus());
+  };
   useEffect(() => {
     const controller = new AbortController();
     setPanTilt(false);
@@ -182,7 +186,7 @@ export function LivePlayer({ camera }) {
       data-paused={paused}
       data-direction-open={directionOpen && panTilt}
       onKeyDown={(event) => {
-        if (event.key === "Escape") setDirectionOpen(false);
+        if (event.key === "Escape" && directionOpen) closeDirection();
         if (
           directionOpen &&
           !["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)
@@ -331,8 +335,9 @@ export function LivePlayer({ camera }) {
           </button>
         </div>
       )}
-      {playing && !error && panTilt && (
+      {playing && !error && panTilt && !directionOpen && (
         <button
+          ref={directionToggle}
           className="feed-position-toggle"
           aria-label={`Camera direction ${camera.name}`}
           title={directionOpen ? "Close position controls" : "Pan and tilt"}
@@ -354,21 +359,25 @@ export function LivePlayer({ camera }) {
             {[
               ["up", ChevronUp],
               ["left", ChevronLeft],
-              ["stop", Square],
+              ["close", Minimize2],
               ["right", ChevronRight],
               ["down", ChevronDown],
             ].map(([direction, Icon]) => (
               <button
                 key={direction}
                 className={`direction-${direction}`}
-                disabled={moving && direction !== "stop"}
+                disabled={moving && direction !== "close"}
                 title={
-                  direction === "stop" ? "Stop camera" : `Nudge ${direction}`
+                  direction === "close" ? "Collapse PTZ" : `Nudge ${direction}`
                 }
-                aria-label={`${direction === "stop" ? "Stop" : `Nudge ${direction}`} ${camera.name}`}
-                onClick={() => changeDirection(direction)}
+                aria-label={`${direction === "close" ? "Collapse PTZ" : `Nudge ${direction}`} ${camera.name}`}
+                onClick={() =>
+                  direction === "close"
+                    ? closeDirection()
+                    : changeDirection(direction)
+                }
               >
-                <Icon size={direction === "stop" ? 12 : 17} />
+                <Icon size={direction === "close" ? 14 : 17} />
               </button>
             ))}
           </div>
