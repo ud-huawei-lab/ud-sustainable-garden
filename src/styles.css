@@ -3635,3 +3635,156 @@ input {
   font-size: 10px;
   margin: 0 8px 8px;
 }
+
+/* Compact glass controls: the feed stays clear until interaction. */
+.feed-controls {
+  left: 50%;
+  bottom: 38px;
+  transform: translateX(-50%);
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid #ffffff24;
+  border-radius: 12px;
+  background: rgba(16, 19, 21, 0.64);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 4px 14px #0002;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+  z-index: 2;
+}
+.camera-feed:hover .feed-controls,
+.camera-feed:focus-within .feed-controls,
+.camera-feed[data-paused="true"] .feed-controls,
+.camera-feed[data-direction-open="true"] .feed-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+.feed-controls button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  color: #f5f5f5;
+}
+.feed-controls button:hover {
+  background: #ffffff1c;
+}
+.feed-controls :is(button, input):focus-visible,
+.feed-direction-panel button:focus-visible {
+  outline: 1px solid #ddd;
+  outline-offset: 1px;
+}
+.feed-volume {
+  display: flex;
+  align-items: center;
+}
+.feed-volume input {
+  width: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  transition:
+    width 160ms ease,
+    opacity 160ms ease;
+}
+.feed-volume:hover input,
+.feed-volume:focus-within input {
+  width: 60px;
+  opacity: 1;
+  margin: 0 8px 0 2px;
+}
+.feed-controls .feed-live {
+  min-width: 52px;
+  padding-inline: 6px;
+  font-size: 10px;
+}
+.feed-direction-panel {
+  position: absolute;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid #ffffff24;
+  background: rgba(16, 19, 21, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: #eee;
+  z-index: 3;
+}
+.feed-direction-panel > span {
+  display: block;
+  text-align: center;
+  font-size: 9px;
+  line-height: 12px;
+  margin-bottom: 4px;
+  color: #ddd;
+}
+.direction-pad {
+  display: grid;
+  grid-template: repeat(3, 28px) / repeat(3, 28px);
+  justify-content: center;
+}
+.direction-pad button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: inherit;
+  border-radius: 6px;
+}
+.direction-pad button:hover {
+  background: #ffffff20;
+}
+.direction-up {
+  grid-area: 1 / 2;
+}
+.direction-left {
+  grid-area: 2 / 1;
+}
+.direction-stop {
+  grid-area: 2 / 2;
+}
+.direction-right {
+  grid-area: 2 / 3;
+}
+.direction-down {
+  grid-area: 3 / 2;
+}
+@media (hover: none), (pointer: coarse) {
+  .feed-controls {
+    opacity: 1;
+    pointer-events: auto;
+    padding: 3px;
+  }
+  .feed-controls button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+@media (max-width: 560px) {
+  .feed-controls {
+    bottom: 30px;
+  }
+  .feed-direction-panel {
+    bottom: 78px;
+  }
+  .feed-caption {
+    padding: 24px 12px 10px;
+  }
+  .feed-caption > span {
+    font-size: 10px;
+  }
+  .feed-caption time {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-controls,
+  .feed-volume input {
+    transition: none;
+  }
+}

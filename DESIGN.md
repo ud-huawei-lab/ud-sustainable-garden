@@ -21,3 +21,5 @@ Home hides the approximation note and footer text. Motion buttons and display se
 The chat composer and reply panel use neutral frosted glass. The compact model selector, camera selector, circular context control, and send button are grouped on the right. Focus borders are absent in the chat; keyboard-focused controls use a subtle background highlight. The reply area stays 320px high (capped by the viewport), auto-follows new messages, and preserves scrollback when the reader moves up.
 
 The composer is a single compact row. Model selection uses an anchored glass picker instead of native form chrome. Enter sends; Shift+Enter inserts a newline, and IME composition is preserved.
+
+Live camera controls use a centered dark glass dock above the name/time caption: pause/play, sound, a volume slider revealed on interaction, Live, a direction popover when supported, and fullscreen. The feed remains clear on desktop until hover or keyboard focus; paused feeds and touch screens keep controls visible. Pan/tilt uses short deliberate nudges and an explicit Stop; no calibration, continuous hold, or automated AI movement is offered.

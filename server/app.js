@@ -9,6 +9,7 @@ import { createAuth } from "./auth.js";
 import { memoryStore } from "./store.js";
 import { createTickets } from "./tickets.js";
 import { createVisionRouter } from "./vision.js";
+import { createCameraControlsRouter } from "./camera-controls.js";
 import { allowedEntities, cameras, metrics } from "../shared/catalog.js";
 
 export async function createApp(
@@ -99,7 +100,11 @@ export async function createApp(
     res.set("Cache-Control", "no-store");
     if (
       req.method !== "GET" &&
-      !(req.method === "POST" && req.path === "/ai/analyze")
+      !(
+        req.method === "POST" &&
+        (req.path === "/ai/analyze" ||
+          /^\/cameras\/(trees|garden)\/ptz$/.test(req.path))
+      )
     )
       return res.sendStatus(405);
     if (req.method === "POST" && !origins.includes(req.headers.origin))
@@ -110,6 +115,7 @@ export async function createApp(
   });
   app.use("/api", auth.requireSession);
   app.use("/api/ai", createVisionRouter(env));
+  app.use("/api/cameras", createCameraControlsRouter(ha));
   app.get("/api/events", (req, res) => {
     // A 204 stops EventSource reconnects; the client uses one-second HTTP reads.
     if (serverless) return res.status(204).end();

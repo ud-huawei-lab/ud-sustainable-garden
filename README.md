@@ -30,7 +30,7 @@ The branded sign-in screen uses server-validated authentication in both developm
 
 Login accepts at most eight attempts per client address in 15 minutes, with bounded password-verification concurrency. Unknown usernames and incorrect passwords receive the same error. Login/logout require an allowed Origin, and cross-site API requests are rejected. Requests have bounded bodies; security headers and a production Content Security Policy restrict executable content.
 
-The server signs in to Home Assistant and retains tokens in memory. Authentication steps share one persistent connection because the remote tunnel binds login flows to the request IP. Browser clients only receive allowlisted garden entities and stripped attributes. There is no device-control endpoint or unrestricted HA proxy.
+The server signs in to Home Assistant and retains tokens in memory. Authentication steps share one persistent connection because the remote tunnel binds login flows to the request IP. Browser clients only receive allowlisted garden entities and stripped attributes. Device control is limited to authenticated pan/tilt nudges and Stop for the two allowlisted cameras. There is no unrestricted HA proxy.
 
 Local hosting subscribes to HA state changes over WebSocket and relays them with SSE, coalescing bursts over 250 ms. Vercel uses one-second authenticated HTTP readings within its bounded function runtime. Both paths use real Home Assistant values; updates remain limited by source-device reporting intervals. REST readings are cached for one second per warm instance.
 
@@ -66,3 +66,7 @@ The dashboard can be embedded in Home Assistant or other websites. Framing restr
 ## Camera AI
 
 See [bridge/README.md](bridge/README.md) for the DGX gateway, security boundaries, and operational commands. Vercel requires AI_BRIDGE_URL and sensitive AI_BRIDGE_TOKEN. Analysis is manual and read-only; no automatic equipment actions or continuous surveillance loop are configured.
+
+## Camera controls
+
+The live feeds use a compact glass toolbar for play/pause, mute/volume, return-to-live, fullscreen, and camera direction. Desktop controls appear on hover/focus; touch controls stay visible. The volume slider expands only on interaction. Direction appears only when Home Assistant exposes all four PTZ directions and Stop for that camera. Each authenticated same-origin POST maps to one allowlisted camera button sequence: move, 350ms delay, Stop, executed in Home Assistant. There is no generic service-call or script endpoint. Stop bypasses the local nudge lock, and a failed sequence triggers an extra best-effort Stop. The model cannot operate these controls.
