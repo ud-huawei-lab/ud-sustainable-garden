@@ -74,6 +74,8 @@ test("HTTP boundary protects garden data, rejects arbitrary writes, and validate
     "/api/events",
     "/api/history",
     "/api/water",
+    "/api/growth",
+    "/api/growth/frame",
     "/api/cameras/trees/snapshot",
     "/api/cameras/trees/live",
     "/api/video/trees/master.m3u8",

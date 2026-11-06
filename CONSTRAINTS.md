@@ -1,7 +1,7 @@
 # Quality contract
 
 - No status dots, indicators, or connection badges.
-- No sample sensor values or fake history. Missing data stays missing.
+- No sample sensor values or fake history. Missing data stays missing. The one approved exception is the pitch's sample growth chart in `src/growthSample.js`, which stays in the browser and never reaches the assistant or stored measurements.
 - AI UI only; disabled input, no model/agent calls.
 - Credentials stay in ignored environment configuration and server memory.
 - Read-only HA endpoints, allowlisted entity IDs, history range at most 31 days.

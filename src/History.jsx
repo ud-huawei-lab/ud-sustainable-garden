@@ -282,10 +282,12 @@ export function Chart({ data, metric }) {
       )}
       <div className="chart-detail" aria-live="polite">
         {hoverTime == null ? (
-          <span>
-            Hover over the chart to explore readings, or focus it and use the
-            arrow keys.
-          </span>
+          metric.quiet ? null : (
+            <span>
+              Hover over the chart to explore readings, or focus it and use the
+              arrow keys.
+            </span>
+          )
         ) : (
           <>
             <span>{time(hoverTime, hoverLabel)}</span>

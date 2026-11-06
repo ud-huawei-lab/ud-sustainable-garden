@@ -11,6 +11,7 @@ import { memoryStore } from "./store.js";
 import { createTickets } from "./tickets.js";
 import { createVisionRouter } from "./vision.js";
 import { createCameraControlsRouter } from "./camera-controls.js";
+import { createGrowthRouter } from "./growth.js";
 import { allowedEntities, cameras, metrics } from "../shared/catalog.js";
 
 export async function createApp(
@@ -229,6 +230,7 @@ export async function createApp(
     waterCache.set(range, { at: Date.now(), data });
     res.json(data);
   });
+  app.use("/api/growth", createGrowthRouter(env));
   const cameraFor = (id) => cameras.find((c) => c.id === id);
   const streamUrl = (id, stream) =>
     `/api/video/${id}/${tickets ? tickets.seal("camera", { ...stream, id }, Math.max(1, stream.expires - Date.now())) + "/" : ""}${new URL(stream.playlist).pathname.split("/").pop()}`;

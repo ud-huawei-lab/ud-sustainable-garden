@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Plants page and nightly camera measurements of plant height, width, canopy and leaf cover, stored on the DGX.
+- Add a plant measurement overlay to the Camera 1 feed.
 - Add the Water page: calculated absolute humidity, VPD and FAO-56 ET0 with dew point, from existing station history. Outages stay blank.
 - `npm run dev` on loopback skips sign-in. Deployments and `npm start` still require it.
 - Keep the assistant panel collapsed when models fail to load, and let its collapse button work.
