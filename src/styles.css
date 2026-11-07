@@ -2116,7 +2116,7 @@ input {
     order: 2;
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 0;
   }
   nav a {
@@ -2549,7 +2549,7 @@ input {
     min-height: 200px;
   }
   nav {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 }
 /* Reading: independent category columns. */
@@ -2658,7 +2658,7 @@ input {
 }
 @media (max-width: 850px) {
   nav {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 }
 
@@ -4079,13 +4079,85 @@ input {
 .water-switch button {
   white-space: nowrap;
 }
-.page-water .water-switch button.selected {
+:is(.page-water, .page-soil) .water-switch button.selected {
   background: rgba(255, 255, 255, 0.1);
 }
 .panel .info-tip-text {
   top: calc(100% + 8px);
   bottom: auto;
   left: -8px;
+}
+.soil-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.soil-card .medium-reading,
+.soil-empty .medium-reading {
+  margin: 0;
+  padding: 18px 0 0;
+}
+.soil-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.soil-scene {
+  position: relative;
+  min-height: 380px;
+  overflow: hidden;
+}
+.soil-scene .twin-canvas {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 12%),
+    linear-gradient(to top, transparent, #000 14%);
+  mask-image:
+    linear-gradient(to right, transparent, #000 12%),
+    linear-gradient(to top, transparent, #000 14%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.soil-scene .scene-label {
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: none;
+  color: #f5f5f5;
+  font-size: 11px;
+}
+.soil-legend {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: 12px;
+}
+.soil-legend li::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--band) 35%, transparent 72%);
+  vertical-align: -2px;
+}
+.soil-empty {
+  max-width: 560px;
+  margin: 8vh auto 0;
+  text-align: center;
+}
+.soil-empty .medium-reading {
+  font-size: 28px;
+  letter-spacing: -0.8px;
+  text-align: center;
 }
 .water-reading {
   display: flex;
@@ -4197,7 +4269,8 @@ input {
   }
 }
 @media (max-width: 960px) {
-  .page-water {
+  .page-water,
+  .page-soil {
     padding-bottom: 96px;
   }
   .water-drawer-handle {
@@ -4206,6 +4279,19 @@ input {
 }
 @media (max-width: 960px) {
   .water-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1100px) {
+  .soil-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .soil-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .soil-cards {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -4233,6 +4319,44 @@ input {
   --chart-secondary: #ffd27a;
   --shadow: none;
   color: var(--text);
+}
+/* Soil uses the same pattern in earth tones. */
+:root:not([data-theme="dark"]):has(.page-soil) {
+  --page-background: linear-gradient(
+    150deg,
+    #2b1c12 0%,
+    #4a3020 14%,
+    #7a5233 36%,
+    #5c3d26 66%,
+    #2e1e13 100%
+  );
+  --base: #33221a;
+  --surface: transparent;
+  --subtle: rgba(255, 255, 255, 0.14);
+  --text: #faf4ec;
+  --muted: #eadccb;
+  --line: rgba(255, 255, 255, 0.24);
+  --chart-line: rgba(255, 255, 255, 0.16);
+  --chart-primary: #faf4ec;
+  --chart-secondary: #e6c49a;
+  --shadow: none;
+  color: var(--text);
+}
+:root[data-theme="dark"]:has(.page-soil) {
+  --page-background:
+    radial-gradient(
+      ellipse at 85% 0%,
+      rgba(170, 120, 70, 0.26),
+      transparent 55%
+    ),
+    #000;
+}
+:root[data-theme="dark"] .page-soil .panel {
+  background: linear-gradient(
+    to bottom left,
+    rgba(205, 155, 105, 0.16),
+    rgba(255, 255, 255, 0.02) 75%
+  );
 }
 /* Water uses the same pattern in blue. */
 :root:not([data-theme="dark"]):has(.page-water) {
@@ -4265,25 +4389,25 @@ input {
     ),
     #000;
 }
-:root:not([data-theme="dark"]):has(:is(.page-plants, .page-water)) body {
+:root:not([data-theme="dark"]):has(:is(.page-plants, .page-water, .page-soil)) body {
   background: transparent;
 }
-:root:not([data-theme="dark"]):has(:is(.page-plants, .page-water)) .chat-panel {
+:root:not([data-theme="dark"]):has(:is(.page-plants, .page-water, .page-soil)) .chat-panel {
   background: color-mix(in srgb, var(--base) 86%, transparent);
 }
-:root:not([data-theme="dark"]) :is(.page-plants, .page-water) .panel {
+:root:not([data-theme="dark"]) :is(.page-plants, .page-water, .page-soil) .panel {
   background: linear-gradient(
     to bottom left,
     rgba(255, 255, 255, 0.16),
     rgba(255, 255, 255, 0.03) 75%
   );
 }
-:root:has(:is(.page-plants, .page-water)) .chat-composer {
+:root:has(:is(.page-plants, .page-water, .page-soil)) .chat-composer {
   background: rgba(255, 255, 255, 0.1);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-:root[data-theme="dark"]:has(:is(.page-plants, .page-water)) .chat-composer {
+:root[data-theme="dark"]:has(:is(.page-plants, .page-water, .page-soil)) .chat-composer {
   background: rgba(255, 255, 255, 0.05);
 }
 :root[data-theme="dark"] .page-water .panel {

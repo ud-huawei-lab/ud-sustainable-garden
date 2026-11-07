@@ -10,6 +10,7 @@ import {
   LogOut,
   Droplets,
   Sprout,
+  Shovel,
 } from "lucide-react";
 import { useReadings } from "./data.js";
 import { Headline, Solar, WindPanel, RainPanel, AirPanel } from "./Weather.jsx";
@@ -21,10 +22,12 @@ import Assistant from "./Assistant.jsx";
 import WaterPage from "./Water.jsx";
 import PlantsPage from "./Plants.jsx";
 const Home = lazy(() => import("./Home.jsx"));
+const SoilPage = lazy(() => import("./Soil.jsx"));
 const pages = {
   home: "Digital garden",
   water: "Air moisture & plant demand",
   plants: "Plant size",
+  soil: "Soil moisture",
   overview: "Current readings",
   readings: "Reading & history",
   cameras: "Garden CCTV",
@@ -46,6 +49,7 @@ export default function App({ onSignOut, signingOut }) {
   });
   const [page, setPage] = useState(currentPage);
   const [metric, setMetric] = useState(null);
+  const [sample, setSample] = useState(false);
   const dialog = useRef(null);
   useEffect(() => {
     const changed = () => {
@@ -64,7 +68,7 @@ export default function App({ onSignOut, signingOut }) {
   useEffect(() => {
     if (metric && !dialog.current.open) dialog.current.showModal();
   }, [metric]);
-  const fullPage = page === "plants" || page === "water";
+  const fullPage = page === "plants" || page === "water" || page === "soil";
   const navigate = (target) => {
     location.hash = `/${target}`;
   };
@@ -96,6 +100,7 @@ export default function App({ onSignOut, signingOut }) {
             ["home", "Home", Box],
             ["water", "Water", Droplets],
             ["plants", "Plants", Sprout],
+            ["soil", "Soil", Shovel],
             ["overview", "Overview", LayoutGrid],
             ["readings", "Reading", Gauge],
             ["cameras", "CCTV", Cctv],
@@ -156,6 +161,8 @@ export default function App({ onSignOut, signingOut }) {
               dark={dark}
               onHistory={showHistory}
               onCameras={() => navigate("cameras")}
+              sample={sample}
+              onSample={setSample}
             />
           </Suspense>
         )}
@@ -163,6 +170,13 @@ export default function App({ onSignOut, signingOut }) {
           <WaterPage entities={data.entities} onHistory={showHistory} />
         )}
         {page === "plants" && <PlantsPage />}
+        {page === "soil" && (
+          <Suspense
+            fallback={<Skeleton kind="chart" label="Loading soil moisture" />}
+          >
+            <SoilPage sample={sample} dark={dark} />
+          </Suspense>
+        )}
         {page === "overview" && !data.fetchedAt && !data.error ? (
           <Skeleton kind="overview" />
         ) : (

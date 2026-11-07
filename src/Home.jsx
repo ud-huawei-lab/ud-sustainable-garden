@@ -19,7 +19,14 @@ import { createGardenScene } from "./gardenScene.js";
 import { read } from "./data.js";
 import { gardenTrees } from "../shared/garden-layout.js";
 import { sceneWind, sceneBrightness } from "../shared/scene-weather.js";
-export default function Home({ entities, dark, onHistory, onCameras }) {
+export default function Home({
+  entities,
+  dark,
+  onHistory,
+  onCameras,
+  sample,
+  onSample,
+}) {
   const host = useRef(null),
     markers = useRef([]),
     scene = useRef(null);
@@ -231,6 +238,15 @@ export default function Home({ entities, dark, onHistory, onCameras }) {
                   role="switch"
                   checked={showLabels}
                   onChange={(event) => setShowLabels(event.target.checked)}
+                />
+              </label>
+              <label>
+                <span>Sample data</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={sample}
+                  onChange={(event) => onSample(event.target.checked)}
                 />
               </label>
               <label>
