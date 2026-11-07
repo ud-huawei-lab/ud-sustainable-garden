@@ -51,7 +51,7 @@ function useWater(range) {
   return { data, error, loading, retry: () => setAttempt((n) => n + 1) };
 }
 
-function Switch({ label, options, value, onChange }) {
+export function Switch({ label, options, value, onChange }) {
   return (
     <div className="range-control water-switch" role="group" aria-label={label}>
       {options.map(([key, text]) => (

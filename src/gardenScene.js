@@ -13,9 +13,12 @@ export function createGardenScene(
   host,
   dark,
   markerElements,
-  { view = "3d", sunHour = 6, onSunTime = () => {} } = {},
+  { view = "3d", sunHour = 6, onSunTime = () => {}, focus = null } = {},
 ) {
   const plan = view === "2d";
+  const startPosition =
+    focus?.position ?? (plan ? [-2.9, 32, -4.49] : [18, 25, 28]);
+  const startTarget = focus?.target ?? [-2.9, plan ? 0 : 0.3, -4.5];
   const scene = new THREE.Scene();
   // Let the page's green glow continue behind the model without a rectangular canvas background.
   scene.fog = new THREE.Fog(dark ? "#000000" : "#ffffff", 48, 90);
@@ -38,10 +41,10 @@ export function createGardenScene(
   const camera = plan
     ? new THREE.OrthographicCamera(-14, 14, 12, -12, 0.1, 120)
     : new THREE.PerspectiveCamera(38, 1, 0.1, 120);
-  camera.position.set(...(plan ? [-2.9, 32, -4.49] : [18, 25, 28]));
+  camera.position.set(...startPosition);
   if (plan) camera.up.set(0, 0, -1);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(-2.9, plan ? 0 : 0.3, -4.5);
+  controls.target.set(...startTarget);
   controls.enableRotate = !plan;
   controls.minZoom = 0.5;
   controls.maxZoom = 3;
@@ -452,6 +455,50 @@ export function createGardenScene(
       t.z,
     ]),
   ];
+  // Soft moisture glows centred on each trunk, laid on the ground surface.
+  const glowCanvas = document.createElement("canvas");
+  glowCanvas.width = glowCanvas.height = 256;
+  const glowContext = glowCanvas.getContext("2d");
+  const glowFill = glowContext.createRadialGradient(128, 128, 0, 128, 128, 128);
+  glowFill.addColorStop(0, "rgba(255,255,255,0.95)");
+  glowFill.addColorStop(0.4, "rgba(255,255,255,0.6)");
+  glowFill.addColorStop(0.75, "rgba(255,255,255,0.16)");
+  glowFill.addColorStop(1, "rgba(255,255,255,0)");
+  glowContext.fillStyle = glowFill;
+  glowContext.fillRect(0, 0, 256, 256);
+  const glowTexture = new THREE.CanvasTexture(glowCanvas);
+  const soilRings = gardenTrees.map((t) => {
+    const radius = t.potted ? 1.55 : 1.75 * t.size;
+    const glow = new THREE.PlaneGeometry(radius * 2, radius * 2, 28, 28);
+    glow.rotateX(-Math.PI / 2);
+    const points = glow.attributes.position;
+    for (let i = 0; i < points.count; i++) {
+      const height = t.potted
+        ? t.y + 0.1
+        : plantingHeight(t.x + points.getX(i), t.z + points.getZ(i));
+      points.setY(i, height + 0.06);
+    }
+    const ring = new THREE.Mesh(
+      glow,
+      new THREE.MeshBasicMaterial({
+        map: glowTexture,
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    ring.position.set(t.x, 0, t.z);
+    ring.visible = false;
+    if (t.potted) {
+      const soil = new THREE.CircleGeometry(0.5, 40);
+      soil.rotateX(-Math.PI / 2);
+      const top = new THREE.Mesh(soil, ring.material);
+      top.position.y = t.y + 0.875;
+      ring.add(top);
+    }
+    scene.add(ring);
+    return ring;
+  });
   const vector = new THREE.Vector3();
   let labelsVisible = false;
   let labelSizes = markerElements.map((element) => ({
@@ -590,7 +637,7 @@ export function createGardenScene(
             [115, -110],
           ];
       const scale = Math.min(1, width / 900);
-      const [offsetX, offsetY] = offsets[index];
+      const [offsetX, offsetY] = focus ? [0, -6] : offsets[index];
       const size = labelSizes[index];
       const left = THREE.MathUtils.clamp(
         (vector.x * 0.5 + 0.5) * width + offsetX * scale - size.width / 2,
@@ -634,6 +681,12 @@ export function createGardenScene(
       sunMode = mode;
       lastSunTick = -1;
     },
+    setSoilRings(colors) {
+      soilRings.forEach((ring, index) => {
+        ring.visible = Boolean(colors?.[index]);
+        if (ring.visible) ring.material.color.set(colors[index]);
+      });
+    },
     setRevolving(enabled) {
       controls.autoRotate = enabled && !plan;
       controls.autoRotateSpeed = 0.55;
@@ -666,8 +719,8 @@ export function createGardenScene(
       controls.update();
     },
     reset() {
-      camera.position.set(...(plan ? [-2.9, 32, -4.49] : [18, 25, 28]));
-      controls.target.set(-2.9, plan ? 0 : 0.3, -4.5);
+      camera.position.set(...startPosition);
+      controls.target.set(...startTarget);
       if (plan) {
         camera.zoom = 1;
         camera.updateProjectionMatrix();
@@ -681,6 +734,8 @@ export function createGardenScene(
       controls.dispose();
       scene.traverse((object) => object.geometry?.dispose());
       materials.forEach((m) => m.dispose());
+      soilRings.forEach((ring) => ring.material.dispose());
+      glowTexture.dispose();
       parkingTextures.forEach((texture) => texture.dispose());
       sandTexture.dispose();
       renderer.dispose();

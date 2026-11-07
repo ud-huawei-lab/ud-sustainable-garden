@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add a Soil page and a Sample data switch in Home settings, off by default.
 - Add Plants page and nightly camera measurements of plant height, width, canopy and leaf cover, stored on the DGX.
 - Add a plant measurement overlay to the Camera 1 feed.
 - Add the Water page: calculated absolute humidity, VPD and FAO-56 ET0 with dew point, from existing station history. Outages stay blank.
