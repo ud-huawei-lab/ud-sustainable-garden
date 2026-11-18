@@ -8,6 +8,12 @@ import Skeleton from "./Skeleton.jsx";
 import { Panel, Stat } from "./Weather.jsx";
 
 const POTS_VIEW = "1780 1170 1060 890";
+const SLOPE_VIEW = "1450 650 1100 924";
+const FRAME = { width: 3840, height: 2160 };
+const views = {
+  pots: { path: "", frame: "/api/growth/frame", box: POTS_VIEW },
+  slope: { path: "/slope", frame: "/api/growth/slope/frame", box: SLOPE_VIEW },
+};
 const measures = [
   ["heightCm", "Height", "cm"],
   ["widthCm", "Width", "cm"],
@@ -20,8 +26,9 @@ const dayLabel = {
   minute: undefined,
 };
 
-export function useGrowth(enabled = true) {
-  const [data, setData] = useState(null);
+export function useGrowth(enabled = true, path = "") {
+  // Data stays tied to its path, so a new view never renders the old result.
+  const [loaded, setLoaded] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(enabled);
   const [retry, setRetry] = useState(0);
@@ -30,23 +37,24 @@ export function useGrowth(enabled = true) {
     const ctrl = new AbortController();
     setLoading(true);
     setError("");
-    fetch("/api/growth", { signal: ctrl.signal })
+    fetch(`/api/growth${path}`, { signal: ctrl.signal })
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error);
         return result;
       })
-      .then(setData)
+      .then((result) => setLoaded({ path, result }))
       .catch((e) => {
         if (ctrl.signal.aborted) return;
-        setData(null);
+        setLoaded(null);
         setError(e.message || "Plant measurements could not be loaded.");
       })
       .finally(() => {
         if (!ctrl.signal.aborted) setLoading(false);
       });
     return () => ctrl.abort();
-  }, [enabled, retry]);
+  }, [enabled, path, retry]);
+  const data = loaded?.path === path ? loaded.result : null;
   return { data, error, loading, retry: () => setRetry((n) => n + 1) };
 }
 
@@ -71,15 +79,15 @@ function trend(data, nights, key) {
   };
 }
 
-function Growth({ data, measure, setMeasure }) {
-  const nights = SHOW_SAMPLE_GROWTH ? sampleNights(data) : data.nights;
+function Growth({ data, sample, measure, setMeasure }) {
+  const nights = sample ? sampleNights(data) : data.nights;
   if (nights.filter((night) => night.status === "ok").length < 2)
     return (
       <>
         <h2 className="panel-title">Growth</h2>
         <p className="secondary">
-          The growth chart starts after the second night. The job measures both
-          plants at 02:00 Dubai time.
+          The growth chart starts after the second measurement. Each job runs
+          once a day.
         </p>
       </>
     );
@@ -122,111 +130,148 @@ function Growth({ data, measure, setMeasure }) {
   );
 }
 
+function Tile({ view, selected, onSelect, title, note }) {
+  return (
+    <button
+      className="plants-camera"
+      aria-pressed={selected === view}
+      onClick={() => onSelect(view)}
+    >
+      <svg
+        viewBox={views[view].box}
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+      >
+        <image href={views[view].frame} {...FRAME} />
+      </svg>
+      <span>
+        <strong>{title}</strong>
+        <small>{note}</small>
+      </span>
+    </button>
+  );
+}
+
 export default function PlantsPage() {
-  const { data, error, loading, retry } = useGrowth();
+  const [view, setView] = useState("pots");
+  const { data, error, loading, retry } = useGrowth(true, views[view].path);
   const [measure, setMeasure] = useState("heightCm");
-  if (loading && !data)
-    return <Skeleton kind="chart" label="Loading plant measurements" />;
-  if (!data)
-    return (
-      <div className="chart-empty">
-        <p>{error}</p>
-        <button className="quiet-button" onClick={retry}>
-          Try again
-        </button>
-      </div>
-    );
+  const pots = view === "pots";
+  const stamp =
+    data &&
+    time(data.capturedAt, {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   return (
     <section className="plants-page" aria-label="Plant size">
       <div className="plants-view">
         <figure className="plants-figure">
-          <svg
-            className="plants-frame"
-            viewBox={POTS_VIEW}
-            role="img"
-            aria-label={`Night view of both pots, measured ${time(data.capturedAt, dayLabel)}`}
-          >
-            <image
-              href="/api/growth/frame"
-              width={data.frame.width}
-              height={data.frame.height}
-            />
-            <GrowthMarks plants={data.plants} labelSize={30} />
-          </svg>
-          <figcaption className="plants-caption">
-            Measured from the Camera 1 4K night frame,{" "}
-            {time(data.capturedAt, {
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            .
-            <InfoTip label="How these values are measured">
-              Camera estimate, measured from the pot rim. Scale assumes pots{" "}
-              {format(data.potWidths.left, 0)} cm and{" "}
-              {format(data.potWidths.right, 0)} cm wide. Leaf cover shows
-              fullness, not a leaf count.
-            </InfoTip>
-          </figcaption>
+          {data ? (
+            <svg
+              className="plants-frame"
+              viewBox={views[view].box}
+              role="img"
+              aria-label={`${pots ? "Night view of both pots" : "Daylight view of Ghaf and Sidr"}, measured ${time(data.capturedAt, dayLabel)}`}
+            >
+              <image href={views[view].frame} {...FRAME} />
+              <GrowthMarks plants={data.plants} labelSize={pots ? 30 : 26} />
+            </svg>
+          ) : (
+            <div className="plants-frame plants-frame-empty">
+              {loading ? (
+                <Skeleton kind="scene" label="Loading plant measurements" />
+              ) : (
+                <div className="chart-empty">
+                  <p>{error}</p>
+                  <button className="quiet-button" onClick={retry}>
+                    Try again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {data && (
+            <figcaption className="plants-caption">
+              Measured from the{" "}
+              {pots ? "Camera 1 4K night" : "Camera 2 4K daylight"} frame,{" "}
+              {stamp}.
+              <InfoTip label="How these values are measured">
+                {pots ? (
+                  <>
+                    Camera estimate, measured from the pot rim. Scale assumes
+                    pots {format(data.potWidths.left, 0)} cm and{" "}
+                    {format(data.potWidths.right, 0)} cm wide.
+                  </>
+                ) : (
+                  <>
+                    Camera estimate from SAM 2.1, measured from the trunk base.
+                    Scale assumes Ghaf started at{" "}
+                    {format(data.referenceHeights.left, 0)} cm and Sidr at{" "}
+                    {format(data.referenceHeights.right, 0)} cm.
+                  </>
+                )}{" "}
+                Leaf cover shows fullness, not a leaf count.
+              </InfoTip>
+            </figcaption>
+          )}
         </figure>
         <div
           className="plants-cameras"
           role="group"
           aria-label="Measured camera"
         >
-          <button className="plants-camera" aria-pressed="true">
-            <svg
-              viewBox={POTS_VIEW}
-              preserveAspectRatio="xMidYMid slice"
-              aria-hidden="true"
-            >
-              <image
-                href="/api/growth/frame"
-                width={data.frame.width}
-                height={data.frame.height}
-              />
-            </svg>
-            <span>
-              <strong>Mango & Lime</strong>
-              <small>Camera 1</small>
-            </span>
-          </button>
-          <button className="plants-camera" disabled>
-            <img src="/api/cameras/garden/snapshot" alt="" loading="lazy" />
-            <span>
-              <strong>Ghaf & Sidr</strong>
-              <small>Not measured yet</small>
-            </span>
-          </button>
+          <Tile
+            view="pots"
+            selected={view}
+            onSelect={setView}
+            title="Mango & Lime"
+            note="Camera 1"
+          />
+          <Tile
+            view="slope"
+            selected={view}
+            onSelect={setView}
+            title="Ghaf & Sidr"
+            note="Camera 2"
+          />
         </div>
       </div>
-      <div className="plants-side">
-        {data.plants.map((plant) => (
-          <Panel key={plant.id} title={plant.name} className="plants-card">
-            <p className="medium-reading">
-              {format(plant.heightCm, 0)}
-              <span> cm tall</span>
-            </p>
-            <dl className="stat-row">
-              <Stat label="Width">{format(plant.widthCm, 0)} cm</Stat>
-              <Stat label="Canopy">
-                {format(
-                  plant.canopyCm2 == null ? null : plant.canopyCm2 / 10000,
-                  2,
-                )}{" "}
-                m²
-              </Stat>
-              <Stat label="Leaf cover">
-                {format(percent(plant.coverage), 0)}%
-              </Stat>
-            </dl>
+      {data && (
+        <div className="plants-side">
+          {data.plants.map((plant) => (
+            <Panel key={plant.id} title={plant.name} className="plants-card">
+              <p className="medium-reading">
+                {format(plant.heightCm, 0)}
+                <span> cm tall</span>
+              </p>
+              <dl className="stat-row">
+                <Stat label="Width">{format(plant.widthCm, 0)} cm</Stat>
+                <Stat label="Canopy">
+                  {format(
+                    plant.canopyCm2 == null ? null : plant.canopyCm2 / 10000,
+                    2,
+                  )}{" "}
+                  m²
+                </Stat>
+                <Stat label="Leaf cover">
+                  {format(percent(plant.coverage), 0)}%
+                </Stat>
+              </dl>
+            </Panel>
+          ))}
+          <Panel className="plants-growth">
+            <Growth
+              data={data}
+              sample={pots && SHOW_SAMPLE_GROWTH}
+              measure={measure}
+              setMeasure={setMeasure}
+            />
           </Panel>
-        ))}
-        <Panel className="plants-growth">
-          <Growth data={data} measure={measure} setMeasure={setMeasure} />
-        </Panel>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

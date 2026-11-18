@@ -5,6 +5,7 @@ import { once } from "node:events";
 import {
   cmPerPixel,
   growthReport,
+  slopeReport,
   plantSizes,
   potWidths,
 } from "../shared/growth.js";
@@ -52,7 +53,10 @@ test("a corrected pot width changes every saved night", () => {
 test("a missing or invalid pot width stays missing", () => {
   for (const value of ["", undefined, "abc", "0", "-5"]) {
     assert.equal(potWidths({ POT_LEFT_WIDTH_CM: value }).left, null);
-    const sizes = plantSizes(reading, potWidths({ POT_LEFT_WIDTH_CM: value }).left);
+    const sizes = plantSizes(
+      reading,
+      potWidths({ POT_LEFT_WIDTH_CM: value }).left,
+    );
     assert.equal(sizes.heightCm, null);
     assert.equal(sizes.coverage, 0.3);
   }
@@ -113,7 +117,10 @@ test("the route sends the token upstream and hides failures", async () => {
   assert.ok(!JSON.stringify(report).includes(env.GROWTH_TOKEN));
   site.close();
   healthy = false;
-  const broken = await serve(env, async () => new Response("", { status: 500 }));
+  const broken = await serve(
+    env,
+    async () => new Response("", { status: 500 }),
+  );
   const response = await fetch(broken.base);
   assert.equal(response.status, 502);
   assert.deepEqual(await response.json(), {
@@ -136,4 +143,52 @@ test("the sample growth ends on the real latest night and leaves it unchanged", 
   assert.equal(nights.at(-1).plants.left.heightCm, report.plants[0].heightCm);
   assert.ok(nights[0].plants.left.heightCm < report.plants[0].heightCm);
   assert.deepEqual(report.nights, []);
+});
+
+test("the first day's height sets each slope tree's scale", () => {
+  const day = (height, date) => ({
+    date,
+    status: "ok",
+    plants: {
+      left: { heightPx: height, widthPx: 100, areaPx: 2000, coverage: 0.4 },
+      right: { heightPx: 150, widthPx: 75, areaPx: 900, coverage: 0.3 },
+    },
+  });
+  const history = [day(200, "2026-11-07"), day(220, "2026-11-08")];
+  const report = slopeReport(history[1], history, {
+    GHAF_HEIGHT_CM: "100",
+    SIDR_HEIGHT_CM: "60",
+  });
+  assert.equal(report.plants[0].name, "Ghaf");
+  assert.equal(report.plants[0].heightCm, 110);
+  assert.equal(report.plants[0].widthCm, 50);
+  assert.equal(report.plants[1].heightCm, 60);
+  assert.equal(report.nights[0].plants.left.heightCm, 100);
+});
+
+test("a missing reference height stays missing", () => {
+  const day = {
+    date: "2026-11-07",
+    status: "ok",
+    plants: {
+      left: { heightPx: 200, widthPx: 100, areaPx: 10, coverage: 0.4 },
+    },
+  };
+  const report = slopeReport(day, [day], {});
+  assert.equal(report.plants[0].heightCm, null);
+  assert.equal(report.plants[0].coverage, 0.4);
+  assert.equal(report.plants[1].heightCm, null);
+});
+
+test("the slope route reads its own files", async () => {
+  const seen = [];
+  const site = await serve(env, async (url) => {
+    seen.push(url);
+    return Response.json(
+      url.endsWith("/latest.json") ? { date: "2026-11-07", plants: {} } : [],
+    );
+  });
+  assert.equal((await fetch(`${site.base}/slope`)).status, 200);
+  assert.ok(seen.every((url) => url.includes("/slope/")));
+  site.close();
 });

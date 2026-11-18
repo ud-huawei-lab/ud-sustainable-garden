@@ -4518,6 +4518,14 @@ input {
 :root:not([data-theme="dark"]) .plants-caption {
   background: none;
 }
+.plants-frame-empty {
+  display: grid;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+}
+.plants-frame-empty .skeleton-scene {
+  height: 100%;
+}
 .plants-caption {
   position: absolute;
   inset: auto 0 0;
