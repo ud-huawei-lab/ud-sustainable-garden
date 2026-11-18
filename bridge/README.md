@@ -51,3 +51,7 @@ Calibration values in `PLANTS` belong to the Camera 1 guard position. If the cam
 systemctl --user start garden-growth-measure_C42.service
 journalctl --user -u garden-growth-measure_C42 --since today
 ```
+
+`garden_slope.py` measures Ghaf and Sidr at 11:00 Dubai time through `garden-slope-measure_C42.timer`. It runs in the SAM environment at `~/sam_test_C42/.venv`, takes five 4K daylight frames from `camera.camera2_snapshots_clear`, and saves results in `~/garden_growth_C42/slope/`. The tree bases and SAM prompt boxes in `TREES` belong to the Camera 2 guard position. The prompt box is the same every day: an earlier version started from the previous day's box and inflated width and growth, so days up to 17 Nov were recomputed from their saved frames (one frame each, marked `reprocessed`). A backup of the original results is in `slope-backup-20261118.tgz`. If the view moves, update them and delete `slope/reference.jpg`.
+
+Camera 2 and Camera 1 reach Home Assistant through a Reolink hub that sometimes drops its link, and a sleeping camera can miss one snapshot request. Each snapshot is tried up to five times, 30 seconds apart. Each timer also runs a second time (03:30 for the night job, 13:00 for the slope job); that run exits at once if the day already has a good result.

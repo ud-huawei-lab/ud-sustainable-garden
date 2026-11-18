@@ -177,5 +177,73 @@ class PublishTests(unittest.TestCase):
         self.assertNotIn("plants", row)
 
 
+
+
+
+class SnapshotRetryTests(unittest.TestCase):
+    def camera(self, outcomes):
+        ha = growth.HomeAssistant({"ha_url": "http://ha", "ha_username": "u", "ha_password": "p"})
+        ha.token = lambda: "t"
+        calls = []
+
+        def fake_open(request, timeout):
+            calls.append(1)
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, Exception):
+                raise outcome
+
+            class Response:
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *args):
+                    return False
+
+                def read(self, limit):
+                    return outcome
+
+            return Response()
+
+        return ha, calls, fake_open
+
+    def run_snapshot(self, outcomes):
+        ha, calls, fake_open = self.camera(outcomes)
+        original = growth.urllib.request.urlopen
+        growth.urllib.request.urlopen = fake_open
+        waits = []
+        try:
+            return ha.snapshot(wait=waits.append), calls, waits
+        finally:
+            growth.urllib.request.urlopen = original
+
+    def error(self, code):
+        return urllib.error.HTTPError("http://ha", code, "error", {}, None)
+
+    def test_a_server_error_is_retried_until_the_camera_answers(self):
+        image, calls, waits = self.run_snapshot([self.error(500), urllib.error.URLError("timed out"), b"jpeg"])
+        self.assertEqual(image, b"jpeg")
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(waits, [growth.SNAPSHOT_GAP] * 2)
+
+    def test_a_refused_request_is_not_retried(self):
+        with self.assertRaises(urllib.error.HTTPError):
+            self.run_snapshot([self.error(401), b"jpeg"])
+
+    def test_it_gives_up_after_the_last_attempt(self):
+        with self.assertRaises(urllib.error.HTTPError):
+            self.run_snapshot([self.error(500)] * growth.SNAPSHOT_ATTEMPTS)
+
+
+class SkipTests(unittest.TestCase):
+    def test_a_second_run_skips_a_measured_day(self):
+        at = datetime(2026, 11, 18, 22, 0, tzinfo=timezone.utc)
+        folder = Path(tempfile.mkdtemp())
+        self.assertFalse(growth.measured_today(folder, at))
+        (folder / "2026-11-19.json").write_text(json.dumps({"status": "error"}))
+        self.assertFalse(growth.measured_today(folder, at))
+        (folder / "2026-11-19.json").write_text(json.dumps({"status": "ok"}))
+        self.assertTrue(growth.measured_today(folder, at))
+
+
 if __name__ == "__main__":
     unittest.main()

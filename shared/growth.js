@@ -67,9 +67,55 @@ export function growthReport(latest, history, env) {
       plants: Object.fromEntries(
         growthPlants.map(({ id }) => [
           id,
-          night.plants?.[id]
-            ? plantSizes(night.plants[id], widths[id])
-            : null,
+          night.plants?.[id] ? plantSizes(night.plants[id], widths[id]) : null,
+        ]),
+      ),
+    })),
+  };
+}
+
+// The slope trees have no pot, so one reference height sets each tree's scale.
+export const slopeTrees = [
+  { id: "left", name: "Ghaf", heightSetting: "GHAF_HEIGHT_CM" },
+  { id: "right", name: "Sidr", heightSetting: "SIDR_HEIGHT_CM" },
+];
+
+export function slopeReport(latest, history, env) {
+  const first = history.find((day) => day.status === "ok" && day.plants);
+  const heights = Object.fromEntries(
+    slopeTrees.map(({ id, heightSetting }) => [
+      id,
+      positive(env[heightSetting]),
+    ]),
+  );
+  const sizes = (reading, id) =>
+    plantSizes(
+      reading && { ...reading, potPx: first?.plants[id]?.heightPx },
+      heights[id],
+    );
+  return {
+    date: latest.date,
+    capturedAt: latest.capturedAt,
+    frame: latest.frame,
+    referenceHeights: heights,
+    plants: slopeTrees.map(({ id, name }) => {
+      const reading = latest.plants?.[id];
+      return {
+        id,
+        name,
+        ...sizes(reading, id),
+        box: reading?.box ?? null,
+        outline: reading?.outline ?? [],
+      };
+    }),
+    nights: history.map((day) => ({
+      date: day.date,
+      capturedAt: day.capturedAt,
+      status: day.status,
+      plants: Object.fromEntries(
+        slopeTrees.map(({ id }) => [
+          id,
+          day.plants?.[id] ? sizes(day.plants[id], id) : null,
         ]),
       ),
     })),

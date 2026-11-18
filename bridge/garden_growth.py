@@ -11,6 +11,7 @@ import os
 import statistics
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -30,6 +31,10 @@ FRAME_COUNT = 5
 FRAME_GAP = 15
 SETTLE_SECONDS = 25
 MAX_IMAGE_BYTES = 6 * 1024 * 1024
+# The Reolink hub drops its link and sleeping cameras wake slowly, so one
+# failed snapshot is common. Retry before giving up on the day.
+SNAPSHOT_ATTEMPTS = 5
+SNAPSHOT_GAP = 30
 
 # Calibrated on the 4K frame from the saved guard position.
 FRAME_SIZE = (3840, 2160)
@@ -247,13 +252,22 @@ class HomeAssistant:
     def _auth(self):
         return {"Authorization": "Bearer " + self.token()}
 
-    def snapshot(self):
-        request = urllib.request.Request(self.base + "/api/camera_proxy/" + SNAPSHOT, headers=self._auth())
-        with urllib.request.urlopen(request, timeout=60) as response:
-            image = response.read(MAX_IMAGE_BYTES + 1)
-        if not image or len(image) > MAX_IMAGE_BYTES:
-            raise ValueError("Invalid image size")
-        return image
+    def snapshot(self, wait=time.sleep):
+        for attempt in range(1, SNAPSHOT_ATTEMPTS + 1):
+            try:
+                request = urllib.request.Request(self.base + "/api/camera_proxy/" + SNAPSHOT, headers=self._auth())
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    image = response.read(MAX_IMAGE_BYTES + 1)
+                if not image or len(image) > MAX_IMAGE_BYTES:
+                    raise ValueError("Invalid image size")
+                return image
+            except urllib.error.HTTPError as error:
+                if error.code < 500 or attempt == SNAPSHOT_ATTEMPTS:
+                    raise
+            except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError):
+                if attempt == SNAPSHOT_ATTEMPTS:
+                    raise
+            wait(SNAPSHOT_GAP)
 
     def go_to_guard(self):
         self._json(self.base + "/api/services/button/press", {"entity_id": GUARD_GO_TO}, self._auth())
@@ -364,7 +378,19 @@ def measure(ha, wait=time.sleep, clock=lambda: datetime.now(timezone.utc)):
     return night, frames[0]
 
 
+def measured_today(folder, now=None):
+    """True when today's result is already saved, so a later run can skip."""
+    path = folder / (dubai_date(now or datetime.now(timezone.utc)) + ".json")
+    try:
+        return json.loads(path.read_text()).get("status") == "ok"
+    except (OSError, ValueError):
+        return False
+
+
 def run_measure():
+    if measured_today(NIGHTS):
+        print("Already measured tonight.")
+        return 0
     ha = HomeAssistant(json.loads(HA_CONFIG.read_text()))
     try:
         night, image = measure(ha)
@@ -396,6 +422,13 @@ def resolve(path):
         return ROOT / "history.json", "application/json"
     if path == "/frame.jpg":
         return latest_frame_path(), "image/jpeg"
+    if path == "/slope/latest.json":
+        return ROOT / "slope" / "latest.json", "application/json"
+    if path == "/slope/history.json":
+        return ROOT / "slope" / "history.json", "application/json"
+    if path == "/slope/frame.jpg":
+        latest = json.loads((ROOT / "slope" / "latest.json").read_text())
+        return ROOT / "slope" / (latest["date"] + ".jpg"), "image/jpeg"
     return None, None
 
 

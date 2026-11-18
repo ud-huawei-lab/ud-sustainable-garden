@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Measure Ghaf and Sidr daily with SAM 2.1 on Camera 2 daylight frames, and enable their selector on Plants.
+- Retry camera snapshots when the Reolink hub drops, add a second daily run that skips measured days, and keep the slope prompt box fixed.
 - Add a Soil page and a Sample data switch in Home settings, off by default.
 - Add Plants page and nightly camera measurements of plant height, width, canopy and leaf cover, stored on the DGX.
 - Add a plant measurement overlay to the Camera 1 feed.
